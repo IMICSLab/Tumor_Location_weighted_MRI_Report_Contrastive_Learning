@@ -13,7 +13,7 @@ from fused_model import CrossAttention
 
 # sbatch -N 1 -c 2 --mem 128G --time 72:00:00 --gres gpu:1 --array 1-1    --tmp=300G script_slurm.sh
 
-# Source: 
+# Source: https://github.com/mshaikh2/JoImTeR_MLMI_2021/tree/main
 def cosine_distance(x1, x2, dim=1, eps=1e-8):
     """Returns (1 - cosine similarity) between x1 and x2, computed along dim.
     """
@@ -25,7 +25,7 @@ def cosine_distance(x1, x2, dim=1, eps=1e-8):
     cosine_distance = 1 - (w12 / (w1 * w2).clamp(min=eps)).squeeze()
 
     return cosine_distance, cosine_similarity
-# Source: Unknown (actively searching)
+# Source: https://github.com/mshaikh2/JoImTeR_MLMI_2021/tree/main
 def triplet_loss_with_cosine_distance(anc, pos, neg, loc_label, margin,mode):
     positive_dist,_ = cosine_distance(anc, pos)
     negative_dist,_ =  cosine_distance(anc, neg)
@@ -103,7 +103,7 @@ class ContrastiveLoss_cosine2(nn.Module):
         # cosine_similarity = F.cosine_similarity(embedding1, embedding2)
         # print("heyyy",text_embedding.shape,img_embedding.shape)
         
-        # Source: Unknown (actively searching)
+        # Source: https://github.com/mshaikh2/JoImTeR_MLMI_2021/tree/main
         batch_size = img_embedding.shape[0]
         ids = np.array(list(range(batch_size)))
         eps=1e-8
