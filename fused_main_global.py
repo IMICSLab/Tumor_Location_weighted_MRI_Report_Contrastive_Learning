@@ -435,7 +435,7 @@ def train_global_model(args, data_ds,test_dl, output_model_path, tuning=False):
                         validation_true.append(labells.tolist()[i])#[0])
                         validation_estimated.append(prob.tolist()[i])#[0])
 
-                    if ((num_batches_valid + 1) % num_batch_accumulate == 0) or (num_batches_valid + 1 == len(valid_dl)): #If we have enough batches to take a step
+                    if ((num_batches_valid + 1) % num_batch_accumulate == 0) or (num_batches_valid + 1 == len(valid_dl)): 
                         
                         # val_batches = 0  
                         
@@ -1050,7 +1050,7 @@ def train_global_local_model(args, data_ds,test_dl, output_model_path, tuning=Fa
                     #     validation_true.append(labells.tolist()[i])#[0])
                     #     validation_estimated.append(prob.tolist()[i])#[0])
 
-                    if ((num_batches_valid + 1) % num_batch_accumulate == 0) or (num_batches_valid + 1 == len(valid_dl)): #If we have enough batches to take a step
+                    if ((num_batches_valid + 1) % num_batch_accumulate == 0) or (num_batches_valid + 1 == len(valid_dl)): 
                         
                         # val_batches = 0  
                         cap_len_list_val = [element for sublist in cap_lens_list_val for element in sublist]
@@ -1661,7 +1661,7 @@ def train_local_model(args, data_ds,test_dl, output_model_path, tuning=False):
                     #     validation_true.append(labells.tolist()[i])#[0])
                     #     validation_estimated.append(prob.tolist()[i])#[0])
 
-                    if ((num_batches_valid + 1) % num_batch_accumulate == 0) or (num_batches_valid + 1 == len(valid_dl)): #If we have enough batches to take a step
+                    if ((num_batches_valid + 1) % num_batch_accumulate == 0) or (num_batches_valid + 1 == len(valid_dl)): 
                         
                         # val_batches = 0  
                         cap_len_list_val = [element for sublist in cap_lens_list_val for element in sublist]
