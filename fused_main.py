@@ -45,19 +45,16 @@ pil_logger = logging.getLogger('PIL').setLevel(logging.INFO)
 def make_parser():
     parser = argparse.ArgumentParser(description='PyTorch SickKids Brain MRI')
 
-    # Data
+    
     parser.add_argument('--data_path', type=str, default="/hpf/largeprojects/fkhalvati/Sara/lgg/Nomogram_study_LGG_data_Nov.27.xlsx", help='Data path')
     parser.add_argument('--image_path', type=str, default="/hpf/largeprojects/fkhalvati/Projects/SickKids_Brain_Preprocessing/preprocessed_all_seq_kk_july_2022", help='image_path')
     parser.add_argument('--output_dir', type=str, default='/hpf/largeprojects/fkhalvati/Sara/pLGG_results/image_text', help='Output directory')
-    parser.add_argument('--num_workers', type=int, default=16, help='number of workers')
-    parser.add_argument('--resize', type=int, default=224, help='Resizing images')
-
-    # Training
+   
+    
     parser.add_argument('--batch_size', type=int, default=4, help='batch size') #4  
     parser.add_argument('--num_epochs', type=int, default=20, help='number of epochs') #0.0003
     parser.add_argument('--lr', type=float, default=0.0001, help='initial learning rate') #5e-2  #1e-3 #compare:5e-6 #6e-6 (best till now) 0.0002
-    parser.add_argument('--scheduler', default=False, action='store_true', help='[USE] scheduler') ##true?
-    parser.add_argument('--step_size', type=int, default=5, help='scheduler step size')
+    
 
     
     parser.add_argument('--dropout', type=float, default=0, help='dropout') #0.1 #0.15
@@ -355,7 +352,7 @@ def train_model(args, data_ds,test_dl, output_model_path, tuning=False):
                 # -- clip the gradient at a specified value in the range of [-clip, clip].
                 # -- This is mainly used to prevent exploding or vanishing gradients in the network training
     #            nn.utils.clip_grad_value_(model.parameters(), 0.1)
-       #         if num_batches==num_batch_accumulate: #If we have enough batches to take a step
+       #         if num_batches==num_batch_accumulate: 
                 if ((num_batches + 1) % num_batch_accumulate == 0) or (num_batches + 1 == len(train_dl)):
                     optimizer.step() #after if 
                     optimizer.zero_grad() # after if
@@ -438,7 +435,7 @@ def train_model(args, data_ds,test_dl, output_model_path, tuning=False):
                         validation_true.append(labells.tolist()[i])#[0])
                         validation_estimated.append(prob.tolist()[i])#[0])
 
-    #                if val_batches==num_batch_accumulate: #If we have enough batches to take a step
+    #                if val_batches==num_batch_accumulate: 
                         
     #                    val_batches = 0  
 
@@ -771,7 +768,7 @@ def train_image_model_cv(args, data_ds, output_model_path, tuning=False):
                     # -- clip the gradient at a specified value in the range of [-clip, clip].
                     # -- This is mainly used to prevent exploding or vanishing gradients in the network training
         #            nn.utils.clip_grad_value_(model.parameters(), 0.1)
-        #         if num_batches==num_batch_accumulate: #If we have enough batches to take a step
+        #         if num_batches==num_batch_accumulate: 
                     if ((num_batches + 1) % num_batch_accumulate == 0) or (num_batches + 1 == len(train_dl)):
                         optimizer.step() #after if 
                         optimizer.zero_grad() # after if
@@ -1004,7 +1001,7 @@ def train_image_model(args, data_ds,test_dl, output_model_path, tuning=False):
                 # -- clip the gradient at a specified value in the range of [-clip, clip].
                 # -- This is mainly used to prevent exploding or vanishing gradients in the network training
     #            nn.utils.clip_grad_value_(model.parameters(), 0.1)
-       #         if num_batches==num_batch_accumulate: #If we have enough batches to take a step
+       #         if num_batches==num_batch_accumulate: 
                 if ((num_batches + 1) % num_batch_accumulate == 0) or (num_batches + 1 == len(train_dl)):
                     optimizer.step() #after if 
                     optimizer.zero_grad() # after if
@@ -1054,7 +1051,7 @@ def train_image_model(args, data_ds,test_dl, output_model_path, tuning=False):
                         validation_true.append(labells.tolist()[i])#[0])
                         validation_estimated.append(prob.tolist()[i])#[0])
 
-    #                 if ((num_batches_valid + 1) % num_batch_accumulate == 0) or (num_batches_valid + 1 == len(valid_dl)): #If we have enough batches to take a step
+    #                 if ((num_batches_valid + 1) % num_batch_accumulate == 0) or (num_batches_valid + 1 == len(valid_dl)): 
                         
     # #                    val_batches = 0  
 
@@ -1367,7 +1364,7 @@ def train_downstream_image_model_cv(args, data_ds, output_model_path, tuning=Fal
                     # -- clip the gradient at a specified value in the range of [-clip, clip].
                     # -- This is mainly used to prevent exploding or vanishing gradients in the network training
         #            nn.utils.clip_grad_value_(model.parameters(), 0.1)
-        #         if num_batches==num_batch_accumulate: #If we have enough batches to take a step
+        #         if num_batches==num_batch_accumulate: 
                     if ((num_batches + 1) % num_batch_accumulate == 0) or (num_batches + 1 == len(train_dl)):
                         optimizer.step() #after if 
                         optimizer.zero_grad() # after if
@@ -1670,7 +1667,7 @@ def train_downstream_image_text_cv(args, data_ds, output_model_path, tuning=Fals
                     # -- clip the gradient at a specified value in the range of [-clip, clip].
                     # -- This is mainly used to prevent exploding or vanishing gradients in the network training
         #            nn.utils.clip_grad_value_(model.parameters(), 0.1)
-        #         if num_batches==num_batch_accumulate: #If we have enough batches to take a step
+        #         if num_batches==num_batch_accumulate: 
                     if ((num_batches + 1) % num_batch_accumulate == 0) or (num_batches + 1 == len(train_dl)):
                         optimizer.step() #after if 
                         optimizer.zero_grad() # after if
