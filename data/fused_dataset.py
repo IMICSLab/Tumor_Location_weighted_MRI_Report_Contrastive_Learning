@@ -18,58 +18,6 @@ import fnmatch
 # from transformers import GPT2Tokenizer, GPT2Model
 
 
-
-
-def split_dataset_cv(dataset,train_ratio):
-    train_size = int(train_ratio * len(dataset))
- #   validation_size = int(validation_ratio * len(dataset))
-    test_size = len(dataset) - train_size 
-    train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size,test_size])
-    return train_dataset,test_dataset
-    
-
-
-def random_seed(seed_value, use_cuda):
-    np.random.seed(seed_value)  # set np random seed
-    torch.manual_seed(seed_value)  # set torch seed
-    random.seed(seed_value)  # set python random seed
-    if use_cuda:
-        torch.cuda.manual_seed(seed_value)
-        torch.cuda.manual_seed_all(seed_value)
-        # reproducibility
-        torch.use_deterministic_algorithms(True)
-        torch.backends.cudnn.benchmark = False
-
-
-
-
-
-def collate_fn(data):
-    """
-    Custom collate_fn dynamic padding, sort by sequence length (descending order)
-    Sequences are padded to the maximum length of mini-batch sequences.
-    """
-    # data.sort(key=lambda x: len(x[0]), reverse=True)##this should be used # x[-1] since we want X_hm. If I were return from dataloader x,y,idx,x_hm,y_hm,demvec, sentence_embedding, i'd do x[-4]
-    text, y_label= zip(*data)#, sentence_embedding  #, y_hm, demographic_vec, sentence_embedding = zip(*data)
-    # print(text)
-    # text = torch.stack(text, dim=0)#,batch_first=True)#
-    # print(y_label)
-    # print(text[0])
-    # y_label = torch.Tensor(y_label)#
-    # print(type(text),len(text))
-    # text = torch.Tensor(text)
-    # y_label = torch.stack(y_label, dim=0)#
-    #y_hm = torch.stack(y_hm, dim=0)
-    #demographic_vec = torch.stack(demographic_vec, dim=0)
-    ##sentence_embedding = torch.stack(sentence_embedding, dim=0)## this should be used
-    # if isinstance(X_hm[0], torch.Tensor): X_hm = torch.nn.utils.rnn.pad_sequence(X_hm, batch_first=True)
-    # text = torch.nn.utils.rnn.pad_sequence(text, batch_first=True)
-    
-    return torch.tensor(text), torch.tensor(y_label)#, sentence_embedding
-    #return image, y_label, idx, X_hm, y_hm, demograp
-
-
-
 class BertDataset(Dataset):
     def __init__(self,df,image_folder,df_loc):#(self, image_dic,excel_file, image_path_name, class_names)#, image_transform=None)
         # super().__init__()
