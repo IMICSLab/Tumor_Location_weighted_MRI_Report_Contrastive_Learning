@@ -59,35 +59,20 @@ def make_parser():
     # Data
     parser.add_argument('--data_path', type=str, default="/hpf/largeprojects/fkhalvati/Sara/lgg/Nomogram_study_LGG_data_Nov.27.xlsx", help='Data path')
     parser.add_argument('--image_path', type=str, default="/hpf/largeprojects/fkhalvati/Projects/SickKids_Brain_Preprocessing/preprocessed_all_seq_kk_july_2022", help='image_path')
-    #parser.add_argument('--heatmaps_path', type=str, help='Heatmaps directory',
-                       # default='/home/k/khalvati/agniho24/Dataset/fixation_heatmaps')
     parser.add_argument('--output_dir', type=str, default='/hpf/largeprojects/fkhalvati/Sara/pLGG_results/image_text', help='Output directory')
-    parser.add_argument('--class_names', type=list, default=['other', 'Pilocytic Astrocytoma', 'Ganglioglioma'], help='Label names for classification')
-    parser.add_argument('--num_workers', type=int, default=16, help='number of workers')
-    parser.add_argument('--resize', type=int, default=224, help='Resizing images')
 
     # Training
     parser.add_argument('--batch_size', type=int, default=4, help='batch size') #4
     parser.add_argument('--num_epochs', type=int, default=800, help='number of epochs')
-    parser.add_argument('--lr', type=float, default=1e-4, help='initial learning rate') #5e-2  #1e-3 #compare:5e-6 #6e-6 (best till now) 0.0002
-    parser.add_argument('--scheduler', default=False, action='store_true', help='[USE] scheduler') ##true?
+    parser.add_argument('--lr', type=float, default=1e-4, help='initial learning rate')
+    
     parser.add_argument('--step_size', type=int, default=5, help='scheduler step size')
 
-    ## UNET Specific arguments.
-    parser.add_argument('--model_type', default='unet', choices=['baseline', 'unet'], help='baseline, unet')
-    parser.add_argument('--model_teacher', type=str, default='timm-efficientnet-b0', help='model_teacher')
-    parser.add_argument('--pretrained_name', type=str, default='noisy-student', help='model pretrained value')
-    parser.add_argument('--dropout', type=float, default=0, help='dropout') #0.1 #0.15
-    parser.add_argument('--second_loss', type=str, default='ce', choices=['dice', 'ce'], help='Segmentation loss')
-
-    # Misc
+    
     parser.add_argument('--gpus', type=str, default='0', help='Which gpus to use, -1 for CPU')
-    parser.add_argument('--viz', default=False, action='store_true', help='[USE] Vizdom')
-    parser.add_argument('--test', default=False, action='store_true', help='[USE] flag for testing only')
-    parser.add_argument('--testdir', type=str, default=None, help='model to test [same as train if not set]')
     parser.add_argument('--rseed', type=int, default=42, help='Seed for reproducibility')
     parser.add_argument('--margin', type=float, default=0.25)
-    parser.add_argument('--similarity_measure', type=str, default='euclidian')
+    parser.add_argument('--similarity_measure', type=str, default='cosine')
     parser.add_argument('--weight_decay', type=float, default=0.001)
     parser.add_argument('--global_local', type=str, default='global')
     parser.add_argument('--accumulate', type=float , default=32)
@@ -1528,31 +1513,9 @@ def train_local_model(args, data_ds,test_dl, output_model_path, tuning=False):
                     # loss_global = loss_g(image_embeddings,report_embeddings, labels)#+loss_classification  #(distance_list,labels)
 
 
-                    # with torch.no_grad():
-                    #     atten_weights = merged_att_list.detach()
-                        
-                    #     word_atten_weights = []
-                    #     for i in range(bz):
-                            
-                    #         atten_weight = atten_weights[i]
-                    #         print
-                    #         nonzero = atten_weight.nonzero().squeeze()
-                    #         low = torch.quantile(atten_weight[nonzero], 0.1)
-                    #         high = torch.quantile(atten_weight[nonzero], 0.9)
-                    #         atten_weight[nonzero] = atten_weight[nonzero].clip(low, high)
-                    #         word_atten_weights.append(atten_weight.clone())
-                    #     word_atten_weights = torch.stack(word_atten_weights)
-                    #     # TODO: maybe clip the tensor of 10 percentile and 90 percentile
-
-                    # word_atten_weights /= word_atten_weights.sum(dim=1, keepdims=True)
+                
 
 
-                    # loss_local_0 = local_contrastive_loss3( patch_embeddings,word_embeddings,word_attention, cap_len_list,word_atten_weights,margin=args.margin)
-                    # # loss_local_0 = local_loss( patch_embeddings,word_embeddings, cap_len_list)
-                    # loss_local_1 = local_contrastive_loss3( word_embeddings,patch_embeddings,patch_attention_list, cap_len_list,word_atten_weights,margin=args.margin)
-                    # # loss_local_1 = local_loss( word_embeddings,patch_embeddings, cap_len_list)
-                    # # loss_1 = loss_fn(report_embeddings,image_embeddings, labels) 
-                    # # loss0 = (loss_0+loss_1)/2
                     loss_local_0 = local_contrastive_loss2( patch_embeddings,word_embeddings,word_attention, cap_len_list,loc_list,margin=args.margin) #local_loss(patch_embeddings, word_embeddings, cap_len_list,loc_list)
                     # loss_local_0 = local_loss( patch_embeddings,word_embeddings, cap_len_list)
                     loss_local_1 = local_contrastive_loss2( patch_embeddings,patch_embeddings,patch_attention_list, cap_len_list,loc_list,margin=args.margin)
