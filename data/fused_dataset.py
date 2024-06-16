@@ -20,7 +20,7 @@ import fnmatch
 
 class BertDataset(Dataset):
     def __init__(self,df,image_folder,df_loc):#(self, image_dic,excel_file, image_path_name, class_names)#, image_transform=None)
-        # super().__init__()
+        super().__init__()
         self.df=df
         self.image_folder=image_folder
         self.df_loc = df_loc
