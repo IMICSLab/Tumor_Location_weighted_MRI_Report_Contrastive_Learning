@@ -25,7 +25,7 @@ from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 from sklearn.metrics import roc_auc_score, roc_curve, f1_score, recall_score, precision_score
 from fused_dataset import BertDataset,split_dataset_cv,process_excel,EvalDataset,Eval_new_sk, fewshot_support
 from fused_model_copy import generate_model
-from fused_model import ResNet_attention,downstream_image_classifier,SelfAttention, zeroshot_classifier, fewshot_classifier,image_text_attention, image_text, DepthAttention, MultiHeadSelfAttention, MultiHeadDepthAttention, LocalEmbedding_3d, BertClassifier
+from fused_model import ResNet_attention,downstream_image_classifier,SelfAttention,image_text_attention, image_text, DepthAttention, MultiHeadSelfAttention, MultiHeadDepthAttention, LocalEmbedding_3d, BertClassifier
 import pickle
 import stat
 from sklearn.manifold import TSNE
@@ -1800,16 +1800,7 @@ def eval_downstream(model,test_dl,support_dl,mode):
                 # plt.xlabel('t-SNE Dimension 1')
                 # plt.ylabel('t-SNE Dimension 2')
                 # plt.savefig(f"/hpf/largeprojects/fkhalvati/Sara/MRI - x/tsne_bs1.png")
-            elif mode== "zero_shot":
-                label_list = [0,1]
-                pred = zeroshot_classifier(label_list, images , model)
-                print("preddd",pred)
-                prob = pred
-            elif mode== "few_shot":
-                
-                pred = fewshot_classifier(images, support_dl , model)
-                print("preddd",pred)
-                prob = pred
+            
             # test_true.append(labells) #####################3
             # # print("probbbb",prob)
             # # print("probbb",torch.Tensor([prob]))
@@ -1859,11 +1850,7 @@ def eval_downstream_image_text(model,test_dl,support_dl,mode="downstream"):
                 pred , _= model(images.float(),input_id,mask)
                 prob = torch.sigmoid(pred)
                 predicted_labels = torch.where(prob >= threshold, torch.tensor(1,device="cuda"), torch.tensor(0,device="cuda"))
-            elif mode== "zero_shot":
-                label_list = [0,1]
-                pred = zeroshot_classifier(label_list, images , model)
-                # print("preddd",pred)
-                prob = pred
+            
             # test_true.append(labells) #####################3
             # # print("probbbb",prob)
             # # print("probbb",torch.Tensor([prob]))
@@ -1911,11 +1898,7 @@ def eval_downstream_text(model,test_dl,support_dl,mode="downstream"):
                 prob = torch.sigmoid(pred)
                 predicted_labels = torch.where(prob >= threshold, torch.tensor(1,device="cuda"), torch.tensor(0,device="cuda"))
 
-            elif mode== "zero_shot":
-                label_list = [0,1]
-                pred = zeroshot_classifier(label_list, images , model)
-                # print("preddd",pred)
-                prob = pred
+            
             # test_true.append(labells) #####################3
             # # print("probbbb",prob)
             # # print("probbb",torch.Tensor([prob]))
@@ -2015,79 +1998,7 @@ if __name__ == '__main__':
         # train_lossss, train_aucsss, val_lossss, val_aucsss=train_image_model_cv(args,dataset2,args.output_dir)#(args,train_dataset,test_dl,args.output_dir)
 
 
-    elif args.stage=="zero_shot":
-        weight_path=f"/hpf/largeprojects/fkhalvati/Sara/pLGG_results/image_text/_na_location_attention_local_global__fold__0__epoch__{args.weight_epoch}__margin0.25"
-        model=image_text_attention(emb_dim=128,num_heads=2,mode="global_local") 
-        model.cnn.conv1 = nn.Conv3d(1, 64, kernel_size=7, stride=(2, 2, 2), padding=(3, 3, 3), bias=False)
-
-        model.cnn.self_attention = SelfAttention(512)
-        model.cnn.local_embed = LocalEmbedding_3d(
-            256, 256,256
-        )
-        # print("local",model.cnn.local_embed.head)
-        net_dict = model.state_dict()
-        
-        pretrain = torch.load(weight_path)
-        # print("pretrain1",[i for i in net_dict.keys()])# if "cnn.local_embed" in i])
-        # print("pretrain",[i for i in pretrain.keys() if "cnn.local_embed" in i])
-        # print("keyyyyyss", pretrain.keys())
-        # pretrain['state_dict'] = {k.replace('module.', ''): v for k, v in pretrain['state_dict'].items()}
-        # pretrain_dict = {k: v for k, v in pretrain['state_dict'].items() if k in net_dict.keys()}
-        pretrain_dict = {k: v for k, v in pretrain.items()}#if k in net_dict.keys()}
-        # net_dict.update(pretrain_dict)
-        model.load_state_dict(pretrain_dict)
-
-        # test_image_folder = os.path.join("/hpf/largeprojects/fkhalvati/Sara/new_sk2_preprocessing/")
-        test_image_folder = os.path.join("/hpf/largeprojects/fkhalvati/Datasets/MedicalImages/BrainData/SickKids/preprocessed_pLGG_EN_Nov2023_KK")
-
-        df = pd.read_csv("/hpf/largeprojects/fkhalvati/Sara/pLGG_4cohorts_532subs.csv")
-        df = df[df["folder_name"].notnull()]
-        name_list = os.listdir(test_image_folder)
-        df = df[df["folder_name"].isin(name_list)]
-        df.index = range(len(df))
-        test_dataset = Eval_new_sk(df,test_image_folder)
-        test_dl = DataLoader(test_dataset, batch_size=1)#args.batch_size)
-        test_auc =  eval_downstream(model,test_dl, test_dl , mode="zero_shot") 
-        print("test_auc",test_auc)
-        
-    elif args.stage=="few_shot":
-        weight_path=f"/hpf/largeprojects/fkhalvati/Sara/pLGG_results/image_text/_local_if_updated_location_attention_local_global__fold__0__epoch__{args.weight_epoch}__margin0.25"
-        model=image_text_attention(emb_dim=128,num_heads=2,mode="global_local") 
-        model.cnn.conv1 = nn.Conv3d(1, 64, kernel_size=7, stride=(2, 2, 2), padding=(3, 3, 3), bias=False)
-
-        model.cnn.self_attention = SelfAttention(512)
-        model.cnn.local_embed = LocalEmbedding_3d(
-            256, 256,256
-        )
-        # print("local",model.cnn.local_embed.head)
-        res = model.cnn
-        net_dict = model.state_dict()
-        
-        pretrain = torch.load(weight_path)
-        # print("pretrain1",[i for i in net_dict.keys()])# if "cnn.local_embed" in i])
-        # print("pretrain",[i for i in pretrain.keys() if "cnn.local_embed" in i])
-        # print("keyyyyyss", pretrain.keys())
-        # pretrain['state_dict'] = {k.replace('module.', ''): v for k, v in pretrain['state_dict'].items()}
-        # pretrain_dict = {k: v for k, v in pretrain['state_dict'].items() if k in net_dict.keys()}
-        pretrain_dict = {k: v for k, v in pretrain.items()}#if k in net_dict.keys()}
-        # net_dict.update(pretrain_dict)
-        model.load_state_dict(pretrain_dict)
-
-        # test_image_folder = os.path.join("/hpf/largeprojects/fkhalvati/Sara/new_sk2_preprocessing/")
-        test_image_folder = os.path.join("/hpf/largeprojects/fkhalvati/Datasets/MedicalImages/BrainData/SickKids/preprocessed_pLGG_EN_Nov2023_KK")
-
-        df = pd.read_csv("/hpf/largeprojects/fkhalvati/Sara/pLGG_4cohorts_532subs.csv")
-        df = df[df["folder_name"].notnull()]
-        name_list = os.listdir(test_image_folder)
-        df = df[df["folder_name"].isin(name_list)]
-        df.index = range(len(df))
-        print("3333333333",df.index)
-        test_dataset = Eval_new_sk(df,test_image_folder)
-        support_dataset = fewshot_support(df,test_image_folder)
-        test_dl = DataLoader(test_dataset, batch_size=1)#args.batch_size)
-        support_dl = DataLoader(support_dataset, batch_size=1)
-        test_auc =  eval_downstream(model,test_dl,support_dl , mode="few_shot") 
-        print("test_auc",test_auc)
+    
         
     else:  
         # with torch.set_grad_enabled(False):
