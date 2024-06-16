@@ -13,7 +13,7 @@ from fused_model import CrossAttention
 
 # sbatch -N 1 -c 2 --mem 128G --time 72:00:00 --gres gpu:1 --array 1-1    --tmp=300G script_slurm.sh
 
-# Source: Unknown (actively searching)
+# Source: 
 def cosine_distance(x1, x2, dim=1, eps=1e-8):
     """Returns (1 - cosine similarity) between x1 and x2, computed along dim.
     """
