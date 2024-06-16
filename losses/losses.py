@@ -31,8 +31,8 @@ def triplet_loss_with_cosine_distance(anc, pos, neg, loc_label, margin,mode):
     negative_dist,_ =  cosine_distance(anc, neg)
     # cosine_loss = positive_dist - negative_dist + margin
     if mode=="global":
-        # cosine_loss = positive_dist - (1-loc_label)*negative_dist - 0.5*(loc_label)*negative_dist + margin
-        cosine_loss = positive_dist - negative_dist  + margin
+        cosine_loss = positive_dist - (1-loc_label)*negative_dist - 0.5*(loc_label)*negative_dist + margin
+        
     elif mode=="local":
         cosine_loss = positive_dist - negative_dist  + margin
     #     z = torch.zeros_like(score)
