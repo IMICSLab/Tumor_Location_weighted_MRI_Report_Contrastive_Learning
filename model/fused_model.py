@@ -1997,7 +1997,7 @@ class BertClassifier_attention(nn.Module): #(GPT2ForSequenceClassification):#
     #     print("sentence",sentences)
     #     print("agg_embs_batch",agg_embs_batch)
     #     return agg_embs_batch, sentences, last_atten_pt
-
+	# extracted from https://github.com/marshuang80/gloria/blob/main/gloria/models/text_model.py:
     def aggregate_tokens2(self, embeddings, text_ids,last_layer_attn):
         '''
         :param embeddings: bz, 1, 112, 768
@@ -2212,7 +2212,7 @@ class BertClassifier_global_local(nn.Module): #(GPT2ForSequenceClassification):#
         # self.fc2=nn.Linear(256, 1)
         # self.linear_layer = nn.Linear(949, 768)
 
-
+# extracted from https://github.com/marshuang80/gloria/blob/main/gloria/models/text_model.py:
     def aggregate_tokens3(self, embeddings, text_ids,input_attention):
         '''
         :param embeddings: bz, 1, 112, 768
@@ -2337,7 +2337,7 @@ class BertClassifier_global_local(nn.Module): #(GPT2ForSequenceClassification):#
                 if "Ċ" in word:
                     print(word)
         return agg_embs_batch, sentences, last_atten_pt
-
+# extracted from https://github.com/marshuang80/gloria/blob/main/gloria/models/text_model.py:
     def aggregate_tokens2(self, embeddings, text_ids,input_attention):
         '''
         :param embeddings: bz, 1, 112, 768
@@ -2674,7 +2674,7 @@ class BertClassifier_global(nn.Module): #(GPT2ForSequenceClassification):#
         
         # self.fc2=nn.Linear(256, 1)
         # self.linear_layer = nn.Linear(949, 768)
-
+# extracted from https://github.com/marshuang80/gloria/blob/main/gloria/models/text_model.py:
     def aggregate_tokens2(self, embeddings, text_ids):
         '''
         :param embeddings: bz, 1, 112, 768
