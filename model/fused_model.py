@@ -124,7 +124,7 @@ class BertClassifier(nn.Module): #(GPT2ForSequenceClassification):#
 
 # RESNET  #from here
 
-
+# Resnet architecture was extracted from: https://github.com/Tencent/MedicalNet
 def conv3x3x3(in_planes, out_planes, stride=1):
     return nn.Conv3d(in_planes,
                      out_planes,
@@ -662,120 +662,7 @@ class image_text(torch.nn.Module):
 
 ###############################################################################################################
 
-
-# class GlobalEmbedding(nn.Module):
-#     def __init__(self,
-#                  input_dim,#: int = 768,
-#                  hidden_dim,#: int = 2048,
-#                  output_dim):#: int = 512) -> None:
-#         super().__init__()
-#         # print("input_dim",input_dim)
-#         # print("hidden_dim",hidden_dim)
-#         # print("output_dim",output_dim)
-#         # self.head = nn.Sequential(
-#         #     # nn.Linear(input_dim, hidden_dim),
-#         #     # nn.BatchNorm1d(hidden_dim),
-#         #     # nn.ReLU(inplace=True),
-#         #     nn.Linear(input_dim, output_dim),
-#         #     nn.BatchNorm1d(output_dim, affine=False)  # output layer
-#         # )
-#         # 2 linears
-#         # self.head = nn.Sequential(  
-#         #     nn.Linear(input_dim, 256),
-#         #     nn.BatchNorm1d(256),
-#         #     nn.ReLU(inplace=True),
-#         #     nn.Linear(256, output_dim),
-#         #     nn.BatchNorm1d(output_dim, affine=False)  # output layer
-#         # end 2 linears
-        
-#         self.head = nn.Sequential(  
-#             nn.Linear(input_dim, 256),#,#256
-#             nn.BatchNorm1d(256),
-#             nn.ReLU(inplace=True),
-#             nn.Linear(256, 128),
-#             nn.BatchNorm1d(128, affine=False),  # output layer
-#             nn.ReLU(inplace=True) , #remove
-#             nn.Linear(128, 64)
-#         )
-
-#     def forward(self, x):
-#         # print("xxxx",x.shape)
-#         # print("input_dim",input_dim)
-#         # print("hidden_dim",hidden_dim)
-#         # print("output_dim",output_dim)
-#         return self.head (x )
-
-class SoftAttention(nn.Module):
-    def __init__(self,in_groups,m_heads,in_channels):
-        super(SoftAttention, self).__init__()
-        
-        self.learnable_scalar = nn.Parameter(torch.rand(1))
-        self.conv3d = nn.Conv3d(in_channels=in_groups,out_channels=m_heads,kernel_size=(in_channels,1,1), stride=(in_channels,1,1))
-        self.lrelu = nn.LeakyReLU(inplace=True)
-        self.softmax = nn.Softmax(-1)
-    def forward(self, x):
-#         print('x.shape:',x)
-        h,w = x.shape[-2],x.shape[-1]
-        c = torch.unsqueeze(x,1)
-#         print('c.shape:',c)
-        c = self.conv3d(c)
-        c = self.lrelu(c)
-#         print('c.shape relu:',c)
-        c = c.squeeze(2)
-        c = c.view(c.shape[0],c.shape[1],h*w)
-#         print('c.shape h*w:',c)
-        c = self.softmax(c)
-#         print('c.shape sfmx:',c)
-        c = c.view(c.shape[0],c.shape[1],h,w)
-#         print('c.shape:',c)
-        attn_maps = torch.unsqueeze(c.sum(1),1)
-#         print('attn_maps.shape:',attn_maps)
-        importance = x*attn_maps
-        out = x + importance*self.learnable_scalar.expand_as(importance)
-#         print('out.shape:',out)
-        return out, attn_maps, self.learnable_scalar
-
-# class GlobalEmbedding(nn.Module):
-#     def __init__(self,
-#                  input_dim,#: int = 768,
-#                  hidden_dim,#: int = 2048,
-#                  output_dim):#: int = 512) -> None:
-#         super().__init__()
-#         # print("input_dim",input_dim)
-#         # print("hidden_dim",hidden_dim)
-#         # print("output_dim",output_dim)
-#         # self.head = nn.Sequential(
-#         #     # nn.Linear(input_dim, hidden_dim),
-#         #     # nn.BatchNorm1d(hidden_dim),
-#         #     # nn.ReLU(inplace=True),
-#         #     nn.Linear(input_dim, output_dim),
-#         #     nn.BatchNorm1d(output_dim, affine=False)  # output layer
-#         # )
-#         # 2 linears
-#         # self.head = nn.Sequential(  
-#         #     nn.Linear(input_dim, 256),
-#         #     nn.BatchNorm1d(256),
-#         #     nn.ReLU(inplace=True),
-#         #     nn.Linear(256, output_dim),
-#         #     nn.BatchNorm1d(output_dim, affine=False)  # output layer
-#         # end 2 linears
-        
-#         self.head = nn.Sequential(  
-#             nn.Linear(input_dim, 512)#,#256
-#             # nn.BatchNorm1d(512),
-#             # nn.ReLU(inplace=True),
-#             # nn.Linear(256, output_dim),
-#             # nn.BatchNorm1d(output_dim, affine=False),  # output layer
-#             # nn.ReLU(inplace=True)  #remove
-#         )
-#     def forward(self, x):
-#     # print("xxxx",x.shape)
-#     # print("input_dim",input_dim)
-#     # print("hidden_dim",hidden_dim)
-#     # print("output_dim",output_dim)
-#         return self.head (x)
-
-class GlobalEmbedding(nn.Module):
+class GlobalEmbedding(nn.Module): # Parts of this class were extracted from: https://github.com/HKU-MedAI/MGCA/tree/main/mgca/models
     def __init__(self,
                  input_dim = 512):#: int = 512) -> None:
         super().__init__()
@@ -813,7 +700,7 @@ class GlobalEmbedding(nn.Module):
     # print("output_dim",output_dim)
         return self.head (x)
 
-# class LocalEmbedding(nn.Module):
+# class LocalEmbedding(nn.Module): # Parts of this class were extracted from: https://github.com/HKU-MedAI/MGCA/tree/main/mgca/models
 #     def __init__(self, input_dim, hidden_dim, output_dim) -> None:
 #         super().__init__()
 #         hidden_dim=512
@@ -846,7 +733,7 @@ class GlobalEmbedding(nn.Module):
 #         # print("testttttt",x.shape,x.permute(0, 2, 1).shape)
 #         return x.permute(0, 2, 1)
 
-class LocalEmbedding(nn.Module):
+class LocalEmbedding(nn.Module): # Parts of this class were extracted from: https://github.com/HKU-MedAI/MGCA/tree/main/mgca/models
     def __init__(self, input_dim, hidden_dim, output_dim) -> None:
         super().__init__()
         hidden_dim=512
@@ -885,7 +772,7 @@ class LocalEmbedding(nn.Module):
         return x.permute(0, 2, 1)
 
 
-class LocalEmbedding_image(nn.Module):
+class LocalEmbedding_image(nn.Module): # Parts of this class were extracted from: https://github.com/HKU-MedAI/MGCA/tree/main/mgca/models
     def __init__(self, input_dim, hidden_dim, output_dim) -> None:
         super().__init__()
 
@@ -920,7 +807,7 @@ class LocalEmbedding_image(nn.Module):
 
 
 
-class LocalEmbedding_3d(nn.Module):
+class LocalEmbedding_3d(nn.Module): # Parts of this class were extracted from: https://github.com/HKU-MedAI/MGCA/tree/main/mgca/models
     def __init__(self, input_dim, hidden_dim, output_dim) -> None:
         super().__init__()
         self.input_dim=256
@@ -967,81 +854,10 @@ class LocalEmbedding_3d(nn.Module):
         return x#.permute(0, 4, 1,2,3)
 
 
-# class SelfAttention(nn.Module):
-#     def __init__(self, in_channels):
-#         super(SelfAttention, self).__init__()
-
-#         # Define the key, query, and value linear transformations
-#         self.key_conv = nn.Conv3d(in_channels, in_channels, kernel_size=1)
-#         self.query_conv = nn.Conv3d(in_channels, in_channels, kernel_size=1)
-#         self.value_conv = nn.Conv3d(in_channels, in_channels, kernel_size=1)
-
-#         # Attention softmax
-#         self.softmax = nn.Softmax(dim=-1)
-
-#     def forward(self, x):
-#         # Compute key, query, and value tensors
-#         keys = self.key_conv(x)
-#         queries = self.query_conv(x)
-#         values = self.value_conv(x)
-
-#         # Reshape keys, queries, and values
-#         keys = keys.view(keys.size(0), keys.size(-1) * keys.size(-2) * keys.size(-3),-1)
-#         queries = queries.view(queries.size(0), queries.size(-1) * queries.size(-2) * queries.size(-3),-1)
-#         values = values.view(values.size(0), values.size(-1) * values.size(-2) * values.size(-3),-1)
-
-#         # Compute attention scores
-#         # print("qqq",queries.shape,keys.shape,values.shape)
-#         attention = torch.bmm(keys.transpose(1, 2), queries)  #keys.transpose(1, 2)
-#         attention = self.softmax(attention)
-
-#         # Apply attention to values
-#         # print("shapes",values.shape,attention.shape)
-#         out = torch.bmm(values, attention.transpose(1, 2))
-
-#         return out,attention
 
 
-def attention_fn(query, context, temp1):
-    """
-    query: batch x ndf x queryL
-    context: batch x ndf x ih x iw (sourceL=ihxiw)
-    mask: batch_size x sourceL
-    """
-    batch_size, queryL = query.size(0), query.size(2)
-    ih, iw = context.size(2), context.size(3)
-    sourceL = ih * iw
 
-    # --> batch x sourceL x ndf
-    context = context.view(batch_size, -1, sourceL)
-    contextT = torch.transpose(context, 1, 2).contiguous()
-
-    # Get attention
-    # (batch x sourceL x ndf)(batch x ndf x queryL)
-    # -->batch x sourceL x queryL
-    attn = torch.bmm(contextT, query)
-    # --> batch*sourceL x queryL
-    attn = attn.view(batch_size * sourceL, queryL)
-    attn = nn.Softmax(dim=-1)(attn)
-
-    # --> batch x sourceL x queryL
-    attn = attn.view(batch_size, sourceL, queryL)
-    # --> batch*queryL x sourceL
-    attn = torch.transpose(attn, 1, 2).contiguous()
-    attn = attn.view(batch_size * queryL, sourceL)
-
-    attn = attn * temp1
-    attn = nn.Softmax(dim=-1)(attn)
-    attn = attn.view(batch_size, queryL, sourceL)
-    # --> batch x sourceL x queryL
-    attnT = torch.transpose(attn, 1, 2).contiguous()
-
-    # (batch x ndf x sourceL)(batch x sourceL x queryL)
-    # --> batch x ndf x queryL
-    weightedContext = torch.bmm(context, attnT)
-
-    return weightedContext, attn.view(batch_size, -1, ih, iw)
-class SelfAttention(nn.Module):
+class SelfAttention(nn.Module): # Parts of this class were extracted from: https://discuss.pytorch.org/t/attention-in-image-classification/80147/3
     def __init__(self, in_channels):
         super(SelfAttention, self).__init__()
 
@@ -1171,173 +987,8 @@ class SelfAttention(nn.Module):
         return out,attention#.float()#temp.mean(1)#temp.mean(1)#attention
 
 
+# ResNet architecture was extracted from https://github.com/Tencent/MedicalNet    
 
-        
-class DepthAttention(nn.Module):
-    def __init__(self, in_channels):
-        super(DepthAttention, self).__init__()
-
-        # Define the key, query, and value linear transformations
-        self.key_conv = nn.Conv3d(in_channels, in_channels, kernel_size=1)
-        self.query_conv = nn.Conv3d(in_channels, in_channels, kernel_size=1)
-        self.value_conv = nn.Conv3d(in_channels, in_channels, kernel_size=1)
-        self.gamma = nn.Parameter(torch.zeros(1))
-        # Attention softmax
-        self.softmax = nn.Softmax(dim=-1)
-        self.dropout = nn.Dropout(p=0.2)
-        self.bn1 = nn.BatchNorm3d(in_channels)
-    def forward(self, x):
-        # Compute key, query, and value tensors
-        # print("x_aten",x.shape)
-        
-        key = self.key_conv(x)
-        key = self.dropout(key)
-        # key = self.bn1(key)
-        query = self.query_conv(x)
-        query = self.dropout(query)
-        # query = self.bn1(query)
-        value = self.value_conv(x)
-        value = self.dropout(value)
-        # value = self.bn1(value)
-        # Reshape keys, queries, and values
-        # keys = keys.view(keys.size(0), keys.size(-1) * keys.size(-2) * keys.size(-3),-1)
-        # queries = queries.view(queries.size(0), queries.size(-1) * queries.size(-2) * queries.size(-3),-1)
-        # values = values.view(values.size(0), values.size(-1) * values.size(-2) * values.size(-3),-1)
-
-
-        batch_size, channels,  height, width ,depth= x.size()
-        # x=x.mean(1)
-        # batch_size, height, width, depth = x.size()
- 
-
-        # query = query.view(batch_size, channels, -1)
-        # key = key.view(batch_size, channels, -1)
-        # value = value.view(batch_size, channels, -1)
-
-        # query = query.view(batch_size, channels, -1)
-        # key = key.view(batch_size, channels, -1)
-        # value = value.view(batch_size, channels, -1)
-
-        # query = query.view(batch_size, height*width*channels, -1)
-        # key = key.view(batch_size, height*width*channels, -1)
-
-        query = x.view(batch_size, channels,height*width,-1)
-        key = x.view(batch_size, channels,height*width,-1)
-        
-        # query = query.permute(0,1,-1,2)
-        # key = key.permute(0,1,-1,2)
-        # query = self.query_conv(query)
-        # key = self.key_conv(key)
-        query = query.mean(2)
-        # d_q = query.size(-1)
-        key = key.mean(2)
-        
-        # query = nn.AdaptiveAvgPool3d((4,512,1,5))(query).squeeze(3)
-        # key = nn.AdaptiveAvgPool3d((4,512,1,5))(key).squeeze(3)
-        # print("quey_key",query.shape,key.shape)
-
-        # query = F.avg_pool3d(query, kernel_size=2, stride=2, padding=0)
-        # key = F.max_pool3d(key, kernel_size=2, stride=2, padding=0)
-        # query = (nn.AdaptiveAvgPool3d((512,1,5))(query)+nn.AdaptiveMaxPool3d((512,1,5))(query)).squeeze(2)
-        # key = (nn.AdaptiveAvgPool3d((512,1,5))(key)+nn.AdaptiveMaxPool3d((512,1,5))(key)).squeeze(2)
-        # print("quey_key",query.shape,key.shape)
-        # value = value.view(batch_size, channels,-1)
-        
-        # value = value.view(batch_size, channels,height*width, -1)
-        # value = self.value_conv(value)
-        value = value.view(batch_size, channels*height*width, -1)
-        # pred_mask = torch.ones(batch_size, height*width*channels, depth).cuda()
-        # Compute attention scores
-        # print("qqq",queries.shape,keys.shape,values.shape)
-        # print("queryyyy",query.shape,key.shape)
-
-        # key = self.key_conv(key)
-        # query = self.query_conv(query)
-        
-        attention = torch.bmm(query.permute(0, 2, 1), key)#/np.sqrt(d_q)  #keys.transpose(1, 2)
-        # attention = nn.ReLU()(attention)
-        attention = self.softmax(attention)
-
-        attention = self.dropout(attention)
-
-        # Apply attention to values
-        # print("shapes",value.shape,attention.shape)
-        # print("value",value.shape)
-        # print("value",value.shape,attention.shape)
-        # out = torch.matmul(attention, value.permute(0, 2, 1))
-        out = torch.bmm(value, attention.permute(0, 2, 1))
-        # print("depthhhhhhhhhhhhhhhh",out.shape)
-        out = out.view(batch_size, channels,  height, width,depth)
-        # atten_mask = torch.matmul(attention, pred_mask.permute(0, 2, 1))
-        # atten_mask = atten_mask.view(batch_size, channels,  height, width,depth)
-        # print("atten_mask",atten_mask.shape)
-        # out = out.view(batch_size, height, width,depth)
-        temp = out
-        # Residual connection and scaling
-        out = self.gamma * out + x
-        # print("outtt",out.shape,attention.shape)
-
-        # out = out.view(batch_size, depth* height* width,channels)
-
-        # out = out.view(batch_size, height* width,depth,channels)
-        # out=out.mean(1)
-        # print("HII",out.shape,attention.shape)
-        
-        return out#,attention.float()#temp.mean(1)#temp.mean(1)#attention
-
-
-
-
-
-class SelfAttention2(nn.Module):
-    def __init__(self, in_channels):
-        super(SelfAttention, self).__init__()
-
-        # Define the key, query, and value linear transformations
-        self.key_conv = nn.Conv3d(in_channels, in_channels, kernel_size=1)
-        self.query_conv = nn.Conv3d(in_channels, in_channels, kernel_size=1)
-        self.value_conv = nn.Conv3d(in_channels, in_channels, kernel_size=1)
-        self.gamma = nn.Parameter(torch.zeros(1))
-        # Attention softmax
-        self.softmax = nn.Softmax(dim=-1)
-        self.dropout = nn.Dropout(p=0.25)
-    def forward(self, x):
-        # Compute key, query, and value tensors
-        key = self.key_conv(x)
-        query = self.query_conv(x)
-        value = self.value_conv(x)
-
-        # Reshape keys, queries, and values
-        # keys = keys.view(keys.size(0), keys.size(-1) * keys.size(-2) * keys.size(-3),-1)
-        # queries = queries.view(queries.size(0), queries.size(-1) * queries.size(-2) * queries.size(-3),-1)
-        # values = values.view(values.size(0), values.size(-1) * values.size(-2) * values.size(-3),-1)
-        batch_size, channels, depth, height, width = x.size()
-        # query = query.view(batch_size, channels, -1)
-        # key = key.view(batch_size, channels, -1)
-        # value = value.view(batch_size, channels, -1)
-
-
-        # Compute attention scores
-        # print("qqq",queries.shape,keys.shape,values.shape)
-        # attention = torch.matmul(query.permute(0, 2, 1), key)  #keys.transpose(1, 2)
-        print("query,key",query.shape,key.shape)
-        attention = torch.matmul(query, key.permute(0, 2,3,4,1))
-        attention = self.softmax(attention)
-
-        attention = self.dropout(attention)
-
-        # Apply attention to values
-        # print("shapes",values.shape,attention.shape)
-        # print("value",value.shape)
-        out = torch.matmul(attention, value.permute(0,2,3,4,1))#.permute(0, 2, 1))
-        out = out.view(batch_size, channels, depth, height, width)
-
-        # Residual connection and scaling
-        out = self.gamma * out + x
-        out = out.view(batch_size, depth* height* width,channels)
-        out=out.mean(1)
-        # print("HII",out.shape,attention.shape)
-        return out,attention
 class ResNet_attention2(nn.Module):
 
     def __init__(self,use_attention, 
@@ -1695,457 +1346,9 @@ class ResNet_attention2(nn.Module):
         # x=torch.mean(x, dim=1)
         
 
-# class ResNet_attention(nn.Module):
-#     def __init__(self,
-#                  block,
-#                  layers,
-#                  output_dim=512,
-#                  n_input_channels=1,
-#                  conv1_t_size=7,
-#                  conv1_t_stride=1,
-#                  no_max_pool=False,
-#                  shortcut_type='B',
-#                  widen_factor=1,#0.5,  #1.0
-#                  n_classes=400):
-#         super(ResNet_attention, self).__init__()
-#         self.inplanes = 64
-#         self.text_feat_dim: int = 768
-#         # self.output_dim: int = 768,
-#         self.output_dim=output_dim
-#         self.hidden_dim: int = 256#2048
-#         self.interm_feature_dim=256#1024
-#         ###????
-#         self.feature_dim = 512
-        
-#         self.conv1 = nn.Conv3d(
-#             1,
-#             64,
-#             kernel_size=7,
-#             stride=(2, 2, 2),
-#             padding=(3, 3, 3),
-#             bias=False)
-            
-#         self.bn1 = nn.BatchNorm3d(64)
-#         self.relu = nn.ReLU(inplace=True)
-#         self.maxpool = nn.MaxPool3d(kernel_size=(3, 3, 3), stride=2, padding=1)
-#         self.layer1 = self._make_layer(block, 64, layers[0], shortcut_type)
-#         self.layer2 = self._make_layer(
-#             block, 128, layers[1], shortcut_type, stride=2)
-#         self.layer3 = self._make_layer(
-#             block, 256, layers[2], shortcut_type, stride=1, dilation=2)
-#         self.layer4 = self._make_layer(
-#             block, 512, layers[3], shortcut_type, stride=1, dilation=4)
-
-#         self.avgpool = nn.AdaptiveAvgPool3d((1, 1, 1))
-#         # self.fc = nn.Linear(block_inplanes[3] * block.expansion, n_classes)
-#         dropout_rate=0.25#0.1 #0.15
-#         self.dropout = nn.Dropout(dropout_rate)
-
-#         self.global_embed = GlobalEmbedding(
-#                 self.feature_dim, self.hidden_dim, self.output_dim
-#             )
-
-#         self.local_embed = LocalEmbedding_3d(
-#             self.interm_feature_dim, self.hidden_dim, self.output_dim
-#         )
-
-#         # for m in self.modules():
-#         #     if isinstance(m, nn.Conv3d):
-#         #         m.weight = nn.init.kaiming_normal(m.weight, mode='fan_out')
-#         #     elif isinstance(m, nn.BatchNorm3d):
-#         #         m.weight.data.fill_(1)
-#         #         m.bias.data.zero_()
-#         for m in self.modules():
-#             if isinstance(m, nn.Conv3d):
-#                 nn.init.kaiming_normal_(m.weight,
-#                                         mode='fan_out',
-#                                         nonlinearity='relu')
-#             elif isinstance(m, nn.BatchNorm3d):
-#                 nn.init.constant_(m.weight, 1)
-#                 nn.init.constant_(m.bias, 0)
-
-#     def _make_layer(self, block, planes, blocks, shortcut_type, stride=1, dilation=1):
-#         downsample = None
-#         if stride != 1 or self.inplanes != planes * block.expansion:
-#             if shortcut_type == 'A':
-#                 downsample = partial(
-#                     downsample_basic_block,
-#                     planes=planes * block.expansion,
-#                     stride=stride,
-#                     no_cuda=self.no_cuda)
-#             else:
-#                 downsample = nn.Sequential(
-#                     nn.Conv3d(
-#                         self.inplanes,
-#                         planes * block.expansion,
-#                         kernel_size=1,
-#                         stride=stride,
-#                         bias=False), nn.BatchNorm3d(planes * block.expansion))
-
-#         layers = []
-#         layers.append(block(self.inplanes, planes, stride=stride, dilation=dilation, downsample=downsample))
-#         self.inplanes = planes * block.expansion
-#         for i in range(1, blocks):
-#             layers.append(block(self.inplanes, planes, dilation=dilation))
-
-#         return nn.Sequential(*layers)
-
-#     def forward(self, x):
-        
-#         x = self.conv1 (x)
-        
-#         x = self.bn1 (x)
-#         x = self.relu (x)
-#         # if not self.no_max_pool:
-#         x = self.maxpool (x)
-#         x = self.dropout (x)
-#         x = self.layer1 (x)
-#         x = self.dropout(x)
-#         x = self.layer2 (x)
-#         x = self.dropout (x)
-#         x = self.layer3 (x)
-#         x = self.dropout (x)
-#         # print("local_features",x.shape)
-#         # print("localll",x.shape)
-#         local_features = x
-        
-#         # print("local_featrues",local_features.shape)
-#         x = self.layer4 (x)
-#         # x = self.dropout (x)
-        
-#         x = self.avgpool (x)
-        
-#         x = x.view(x.size(0), -1)  #####changed for 3d
-#         # print("feature_dim",x.shape)
-#         # x = self.dropout (x)   #should be included probably
-#         # x = self.fc(x)
-#  #       x = torch.sigmoid(x)#softmax(x)
-#         # local_features = rearrange(local_features, "b c w h l-> b (w h l) c")  ****????
-#         # local_features = rearrange(local_features, "b c w h l-> b w h l c")
-#         # print("contiguous",local_features.shape,local_features.contiguous().shape)
-#         # print("globall",x.shape)
-#         # print("imggg",x.shape)
-#         return x,local_features.contiguous()
-        
-
-#     def forward(self, x):
-#         # print("initttt",x.shape)
-        
-#         x = self.dropout (x)
-#         x = self.conv1 (x)
-#         x = self.bn1 (x)
-#         x = self.relu (x)
-#         if not self.no_max_pool:
-#             x = self.maxpool (x)
-
-#         x = self.layer1 (x)
-#         x = self.dropout(x)
-#         x = self.layer2 (x)
-#         x = self.dropout (x)
-#         x = self.layer3 (x)
-#         x = self.dropout (x)
-#         # print("local_features",x.shape)
-#         # print("localll",x.shape)
-#         local_features = x
-#         # print("local_featrues",local_features.shape)
-#         x = self.layer4 (x)
-#         # x = self.dropout (x)
-
-#         x = self.avgpool (x)
-        
-#         x = x.view(x.size(0), -1)  #####changed for 3d
-#         # print("feature_dim",x.shape)
-#         # x = self.dropout (x)   #should be included probably
-#         # x = self.fc(x)
-#  #       x = torch.sigmoid(x)#softmax(x)
-#         # local_features = rearrange(local_features, "b c w h l-> b (w h l) c")  ****????
-#         # local_features = rearrange(local_features, "b c w h l-> b w h l c")
-#         # print("contiguous",local_features.shape,local_features.contiguous().shape)
-#         # print("globall",x.shape)
-#         # print("imggg",x.shape)
-#         return x,local_features.contiguous()
 
 
-# transformers
-class BertClassifier_attention(nn.Module): #(GPT2ForSequenceClassification):#
 
-    def __init__(self,output_dim, freeze_bert = True,dropout=0.25):
-
-        super(BertClassifier_attention, self).__init__()
-
-
-        self.tokenizer = LongformerTokenizerFast.from_pretrained("yikuan8/Clinical-Longformer")
-        self.idxtoword = {v: k for k, v in self.tokenizer.get_vocab().items()}
-
-        
-        self.bert_layer = LongformerForSequenceClassification.from_pretrained("yikuan8/Clinical-Longformer",
-                                                        gradient_checkpointing=False,
-                                                        attention_window = 512 ,output_attentions=True,output_hidden_states=True)
-
-        self.embedding_dim: int = 768
-        # self.output_dim: int = 768,
-        self.output_dim=output_dim
-        self.hidden_dim: int = 256
-        self.last_n_layers = 1
-
-        self.global_embed = GlobalEmbedding(
-            self.embedding_dim)#, self.hidden_dim, self.output_dim)
-        self.local_embed = LocalEmbedding(
-            self.embedding_dim, self.hidden_dim, self.output_dim)
-
-       
-        
-        self.bert_layer.config.pad_token_id = self.bert_layer.config.eos_token_id#############################333
-        config = LongformerConfig()
-       
-        self.bert_layer.classifier.out_proj=nn.Linear(768, 768) #256
-        
-        for param in self.bert_layer.parameters():
-            
-            param.requires_grad = False
-        for param in self.bert_layer.longformer.encoder.layer[11].parameters():#score #pooler
-            param.requires_grad = True
-        for param in self.bert_layer.classifier.parameters():#score #pooler
-            param.requires_grad = True
-        
-
-        self.dropout1 = nn.Dropout(dropout)
-        
-        self.fc1=nn.Linear(1024, 512)
-        self.fc3=nn.Linear(512,256)
-        
-        self.fc2=nn.Linear(256, 1)
-        self.linear_layer = nn.Linear(949, 768)
-
-
-    # def aggregate_tokens(self, embeddings, text_ids,last_layer_attn):
-    #     '''
-    #     :param embeddings: bz, 1, 112, 768Ss
-    #     :param caption_ids: bz, 112
-    #     :param last_layer_attn: bz, 111
-    #     '''
-    #     _,num_layers, num_words, dim = embeddings.shape
-    #     embeddings = embeddings.permute(0, 2, 1, 3)
-    #     agg_embs_batch = []
-    #     sentences = []
-    #     last_attns = []
-
-    #     # loop over batch
-    #     for embs,text_id, last_attn in zip(embeddings, text_ids,last_layer_attn):
-    #         agg_embs = []
-    #         token_bank = []
-    #         words = []
-    #         word_bank = []
-    #         attns = []
-    #         attn_bank = []
-            
-    #         # loop over sentence
-    #         for word_emb, word_id, attn in zip(embs, text_id,last_attn):  #######????
-    #             word = self.idxtoword[word_id.item()]
-    #             # print("wordddd", word)
-    #             # print("word",word)
-    #             # print("word",word,attn)
-    #             if word == "</s>":# or word=="<s>":#"[ELECTRA]":#"[sep]":#"[SEP]":    #<s>
-    #                 new_emb = torch.stack(token_bank)
-    #                 new_emb = new_emb.sum(axis=0)
-    #                 agg_embs.append(new_emb)
-    #                 words.append("".join(word_bank))
-    #                 attns.append(sum(attn_bank))
-    #                 agg_embs.append(word_emb)
-    #                 words.append(word)
-    #                 attns.append(attn)
-    #                 break
-    #             # This is because some words are divided into two words.
-    #             if not word.startswith("Ġ"):  #Ċ   #Ġ
-    #                 if len(word_bank) == 0:
-    #                     token_bank.append(word_emb)
-    #                     word_bank.append(word)
-    #                     attn_bank.append(attn)
-    #                 else:
-    #                     new_emb = torch.stack(token_bank)
-    #                     new_emb = new_emb.sum(axis=0) #axis
-    #                     agg_embs.append(new_emb)
-    #                     words.append("".join(word_bank))
-                        
-    #                     attns.append(sum(attn_bank))
-
-    #                     token_bank = [word_emb]
-    #                     word_bank = [word]
-    #                     attn_bank = [attn]
-    #             else:
-    #                 token_bank.append(word_emb)
-    #                 word_bank.append(word[1:])
-    #                 attn_bank.append(attn)
-    #         # print("attention bank",attns)
-    #             # print("worddd",word,attn)
-    #         agg_embs = torch.stack(agg_embs)
-    #         padding_size = num_words - len(agg_embs)
-    #         paddings = torch.zeros(padding_size, num_layers, dim)
-    #         # paddings = paddings.type_as(agg_embs)
-    #         words = words + ['<pad>'] * padding_size  #"[PAD]"
-    #         last_attns.append(
-    #             torch.cat([torch.tensor(attns), torch.zeros(padding_size)], dim=0))
-    #         agg_embs_batch.append(torch.cat([agg_embs, paddings]))
-    #         sentences.append(words)
-
-    #     agg_embs_batch = torch.stack(agg_embs_batch)
-    #     agg_embs_batch = agg_embs_batch.permute(0, 2, 1, 3)
-    #     last_atten_pt = torch.stack(last_attns)
-    #     last_atten_pt = last_atten_pt.type_as(agg_embs_batch)
-    #     # print("sentence",agg_embs_batch.shape)
-    #     # print("last_atten_pt",last_atten_pt.nonzero().squeeze())
-    #     print("sentence",sentences)
-    #     print("agg_embs_batch",agg_embs_batch)
-    #     return agg_embs_batch, sentences, last_atten_pt
-	# extracted from https://github.com/marshuang80/gloria/blob/main/gloria/models/text_model.py:
-    def aggregate_tokens2(self, embeddings, text_ids,last_layer_attn):
-        '''
-        :param embeddings: bz, 1, 112, 768
-        :param caption_ids: bz, 112
-        :param last_layer_attn: bz, 111
-        '''
-        _,num_layers, num_words, dim = embeddings.shape
-        embeddings = embeddings.permute(0, 2, 1, 3)
-        agg_embs_batch = []
-        sentences = []
-        last_attns = []
-        # print("embbb",embeddings)
-        # loop over batch
-        for embs,text_id, last_attn in zip(embeddings, text_ids,last_layer_attn):
-            agg_embs = []
-            token_bank = []
-            words = []
-            word_bank = []
-            attns = []
-            attn_bank = []
-            
-            # loop over sentence
-            for word_emb, word_id, attn in zip(embs, text_id,last_attn):  #######????
-                word = self.idxtoword[word_id.item()]
-                # print("wordddd", word)
-                # print("word",word)
-                # print("word",word,attn)
-                if word == "</s>":#"[ELECTRA]":#"[sep]":#"[SEP]":    #<s>
-                    new_emb = torch.stack(token_bank)
-                    new_emb = new_emb.sum(axis=0)
-                    agg_embs.append(new_emb)
-                    words.append("".join(word_bank))
-                    attns.append(sum(attn_bank))
-                    agg_embs.append(word_emb)
-                    words.append(word)
-                    attns.append(attn)
-                    break
-                # This is because some words are divided into two words.
-                if not word.startswith("Ġ"):  #Ċ   #Ġ
-                    if len(word_bank) == 0:
-                        token_bank=[word_emb]
-                        word_bank=[word]
-                        attn_bank=[attn]
-                    else:
-                        new_emb = torch.stack(token_bank)
-                        new_emb = new_emb.sum(axis=0)
-                        agg_embs.append(new_emb)
-                        words.append("".join(word_bank))
-                        
-                        attns.append(sum(attn_bank))
-
-                        token_bank.append(word_emb)
-                        word_bank.append(word)
-                        attn_bank.append(attn)
-                else:
-                    token_bank=[word_emb]
-                    word_bank=[word[1:]]
-                    attn_bank=[attn]
-            # print("attention bank",attns)
-                # print("worddd",word,attn)
-            agg_embs = torch.stack(agg_embs)
-            padding_size = num_words - len(agg_embs)
-            paddings = torch.zeros(padding_size, num_layers, dim)
-            paddings = paddings.type_as(agg_embs)
-            words = words + ['<pad>'] * padding_size  #"[PAD]"
-            last_attns.append(
-                torch.cat([torch.tensor(attns), torch.zeros(padding_size)], dim=0))
-            agg_embs_batch.append(torch.cat([agg_embs, paddings]))
-            sentences.append(words)
-
-        agg_embs_batch = torch.stack(agg_embs_batch)
-        agg_embs_batch = agg_embs_batch.permute(0, 2, 1, 3)
-        last_atten_pt = torch.stack(last_attns)
-        last_atten_pt = last_atten_pt.type_as(agg_embs_batch)
-        # print("sentence",agg_embs_batch.shape)
-        # print("last_atten_pt",last_atten_pt.nonzero().squeeze())
-        # print("sentence",sentences)
-        # print("agg_embs_batch",agg_embs_batch)
-        return agg_embs_batch, sentences, last_atten_pt
-        
-        
-
-    def forward(self, input_ids, attention_mask = None):
-        attention_mask = (input_ids != 0).float() 
-        bert_l=self.bert_layer(input_ids= input_ids, attention_mask=attention_mask,return_dict=True)
-        # print("bert_l",self.bert_layer)
-        attention_mask = torch.ones_like(input_ids)
-        attention_mask[input_ids == 0] = 0
-        pooled_output=bert_l.logits#######
-        #self.bert_layer.longformer.encoder.layer[11]
-        dropout_output = self.dropout1(pooled_output)
-        # print("atttttt",bert_l)#.attentions)
-        #[:, -1, :, 1:]
-        # print("hhhh",bert_l.attentions[-1].shape)
-        # print("attention",bert_l.attentions[11])
-        last_layer_attn = bert_l.attentions[-1][:, :, 1:, 0].mean(dim=1)#[:, :, 0, 1:].mean(dim=1)
-        # print("shape",last_layer_attn.shape)
-        # print("last_layer_attn1",bert_l.attentions[-1][:, -1, :, 1:].mean(dim=-1))#last_layer_attn[:, :, 0, 1:])#[:, :, 0, 1:])#.mean(dim=1))
-        # print("last_layer_attn2",last_layer_attn.mean(dim=1))
-        # print("bert_l_attention",bert_l.attentions[-1].nonzero().squeeze())#[:, :, 0, 1:].mean(dim=1).nonzero().squeeze())
-        all_feat = bert_l.hidden_states[-1].unsqueeze(1)#.hidden_states[-1].unsqueeze(1)  #.last_hidden_state #hidden_states[11]
-        
-        test2=bert_l.hidden_states[-1]
-        # print("test",test2.shape)
-        # print(all_feat)
-        # print("all_feat",all_feat.shape)
-
-        
-        all_feat2=all_feat
-        all_feat, sents, last_atten_pt = self.aggregate_tokens2(all_feat, input_ids, last_layer_attn)
-        # print("last_atten_pt",last_atten_pt.nonzero().squeeze())
-        last_atten_pt = last_atten_pt[:, 1:].contiguous()
-        # print("all_feat",all_feat.shape)
-        if self.last_n_layers == 1:
-            all_feat = all_feat[:, 0]
-        report_feat = all_feat[:, 0].contiguous()
-        word_feat = all_feat[:, 1:].contiguous()
-        word_feat=word_feat.squeeze(1)
-        # print("all_feat",report_feat.shape,word_feat.shape)
-        # all_feat2=all_feat2.view(all_feat2.size(0),-1,768)
-        # all_feat2=all_feat2[:, 0, :]  this one global
-        # all_feat2 = torch.mean(all_feat2, dim=1)  this one global
-        # print("all_feat2",all_feat2.shape)
-        # print("report_feat",report_feat.shape)
-        # all_feat2=self.linear_layer(all_feat2)
-        all_feat2 = pooled_output
-        # print("pooled",all_feat2.shape)
-
-
-        #remove special tokens
-        self.mask_pad = torch.from_numpy((np.array(sents)[:, 1:] == "<pad>") |
-                             (np.array(sents)[:, 1:] == '<s>') |
-                             (np.array(sents)[:, 1:] == '</s>') |
-                             (np.array(sents)[:, 1:] == '<mask>') |
-                             (np.array(sents)[:, 1:] == 'unk') |
-                             (np.array(sents)[:, 1:] == '') |
-                             (np.array(sents)[:, 1:] == 'Ċ')).type(torch.bool)
-
-# Create a mask to filter tensor1
-        mask = ~self.mask_pad.unsqueeze(-1)  # Expand mask to match tensor1's shape
-
-# Filter tensor1 based on the mask
-        
-        word_feat = word_feat[mask]
-        sents = sents[mask]
-        # self.mask_pad = torch.from_numpy((np.array(sents)[:, 1:] == "<pad>")|(np.array(sents)[:, 1:] =='<s>')|(np.array(sents)[:, 1:] =='</s>')|(np.array(sents)[:, 1:] =='<mask>')|(np.array(sents)[:, 1:] =='unk')|(np.array(sents)[:, 1:] =='')|(np.array(sents)[:, 1:] =='Ċ')).type_as(img_embed).bool()
-        # self.text_masks = torch.tensor([token in self.mask_pad for token in text_tokens], dtype=torch.bool)
-        return  all_feat,all_feat2, word_feat, last_atten_pt, sents#report_feat, word_feat, last_atten_pt, sents
 
 
 
@@ -2407,7 +1610,7 @@ class BertClassifier_global_local(nn.Module): #(GPT2ForSequenceClassification):#
             agg_embs = torch.stack(agg_embs)
             padding_size = num_words - len(agg_embs)
             paddings = torch.zeros(padding_size, num_layers, dim)
-            # paddings = paddings.type_as(agg_embs)
+            
             paddings = paddings.to(agg_embs.device)
             words = words + ['<pad>'] * padding_size  #"[PAD]"
             
@@ -2420,33 +1623,7 @@ class BertClassifier_global_local(nn.Module): #(GPT2ForSequenceClassification):#
         agg_embs_batch = agg_embs_batch.permute(0, 2, 1, 3)
              #### commented for special tokens
             
-        # last_atten_pt = torch.stack(last_attns)
-        # last_atten_pt = last_atten_pt.type_as(agg_embs_batch)
-        # print("sentence",agg_embs_batch.shape)
-        # print("last_atten_pt",last_atten_pt.nonzero().squeeze())
-        # print("sentence",sentences)
-        # print("agg_embs_batch",agg_embs_batch)
-        # print("sentences",sentences)
-
-        # special_tokens = ['<s>', '</s>', '<pad>','<mask>' , 'unk']
-        # filtered_tokens = []
-        # filtered_word_embeddings = []
-
-        # for token, embedding in zip(sentences, agg_embs_batch):
-        #     if token not in special_tokens:
-        #         filtered_tokens.append(token)
-        #         filtered_word_embeddings.append(embedding)
-        # filtered_word_embeddings = torch.stack(filtered_word_embeddings)
-        # filtered_word_embeddings = filtered_word_embeddings.permute(0, 2, 1, 3)
-        # print("tokennnnnss",filtered_tokens)
-
-        last_atten_pt = torch.stack(last_attns)
-        last_atten_pt = last_atten_pt.type_as(agg_embs_batch)
-        # print("sentences",sentences,"Ċ") ""
-        # for sentence in sentences:
-        #     for word in sentence:
-        #         if "Ċ" in word:
-        #             print(word)
+        
         return agg_embs_batch, sentences, last_atten_pt
         
         
@@ -2803,6 +1980,7 @@ class BertClassifier_global(nn.Module): #(GPT2ForSequenceClassification):#
         return  all_feat
 
 class image_text_attention_global(torch.nn.Module):
+	# Some parts of the code were extracted from https://github.com/HKU-MedAI/MGCA/tree/main/mgca/models
     def __init__(self,emb_dim,num_heads,mode):
         super().__init__()
 
@@ -2883,6 +2061,7 @@ class image_text_attention_global(torch.nn.Module):
 
 
 class image_text_attention(torch.nn.Module):
+	# Some parts of the code were extracted from https://github.com/HKU-MedAI/MGCA/tree/main/mgca/models
     def __init__(self,emb_dim=256,num_heads=2,mode="global_local"):
         super().__init__()
 
@@ -2907,15 +2086,7 @@ class image_text_attention(torch.nn.Module):
             
         self.word_local_atten_layer = CrossAttention(512,"txt_img")#,sents)
         
-        # Adding intermediate linear layer before final classification
-        # num_intermediate_output = 64
-        # self.intermediate_layer = nn.Linear(1024, num_intermediate_output) #256
-
-        # # Adding a final classification layer that takes in outputs 3
-        # self.final_classification_layer = nn.Linear(num_intermediate_output, 1)
-
-        # patch local attention layer
-        # self.patch_local_atten_layer = CrossAttention(512,"image_text")
+        
 
 
 
@@ -2924,10 +2095,7 @@ class image_text_attention(torch.nn.Module):
 
 
 
-        # self.patch_local_atten_layer = nn.MultiheadAttention(self.emb_dim, self.num_heads, batch_first=True)
-        # # # # sentence local attention layer
-        # # self.word_local_atten_layer = CrossAttention(512,"text_image")#
-        # self.word_local_atten_layer = nn.MultiheadAttention(self.emb_dim, self.num_heads, batch_first=True)
+       
 
 		
     def forward(self, image, input_ids, attention_mask = None):
@@ -2954,73 +2122,19 @@ class image_text_attention(torch.nn.Module):
 
         # print("img_emb_q",img_emb_q.shape)
         
-        # word_emb_q = self.transformer.local_embed(word_feat_q)
+       
         word_emb_q = word_feat_q  # *****
         word_emb_q = F.normalize(word_emb_q, dim=-1)#  *****
-        # print("all_words",word_emb_q.shape,patch_emb_q.shape)
-        # print("attention layer",word_emb_q.shape,patch_emb_q.shape)
-        # print("nn.multihead",torch.bmm(word_emb_q,patch_emb_q.permute(0, 2, 1)).shape)
-        # attention=nn.MultiheadAttention(128, num_heads=1, batch_first=True)
-        # a_layer,_=attention(word_emb_q,patch_emb_q,patch_emb_q)
+        
         report_emb_q = self.transformer.global_embed(report_feat_q)
         report_emb_q = F.normalize(report_emb_q, dim=-1)
         
 
 
 
-        # combined = torch.cat((img_emb_q, report_emb_q), axis=1)
-        # intermediate = self.intermediate_layer(combined)
-        # # intermediate = self.intermediate_layer(img_emb_q)
-        
-        # # Get final labels
-        # labels = self.final_classification_layer(intermediate)
-         
-        # Convert the padding mask to a tensor
-        padding_mask_list=['<s>', '</s>', '<pad>','<mask>' , 'unk','','Ċ']
-        # mask_pad = torch.from_numpy(np.array(sents)[:, 1:] == "<pad>").type_as(image).bool()  #[PAD]"      ***
-        # mask_pad = torch.from_numpy(np.array(sents)[:, 1:] == any(item == 2 for item in list1)).type_as(image).bool()  #[PAD]"      ***
-        # print("PPPP",patch_emb_q.shape)
-        # print("patch",patch_emb_q.shape,word_emb_q.shape)
-        #########################33
-        # mask_pad = torch.from_numpy(np.any(sents[:, 1:][:, np.newaxis] == np.array(padding_mask_list)[np.newaxis, :], axis=-1)).type(torch.bool)
-        mask_pad = torch.from_numpy((np.array(sents)[:, 1:] == "<pad>")|(np.array(sents)[:, 1:] =='<s>')|(np.array(sents)[:, 1:] =='</s>')|(np.array(sents)[:, 1:] =='<mask>')|(np.array(sents)[:, 1:] =='unk')|(np.array(sents)[:, 1:] =='')|(np.array(sents)[:, 1:] =='Ċ')).type_as(image).bool()
-# Printing the mask (True where the condition is met, False otherwise)
-        # print("mask_pred",mask_pad)
        
-###########################################
-        # with torch.no_grad():
-        #     bz = report_emb_q.shape[0]
-        #     atten_weights = merged_att.detach()
-            
-        #     word_atten_weights = []
+       
 
-        #     for i in range(bz):
-                
-        #         atten_weight = atten_weights[i]
-
-        #         nonzero = atten_weight.nonzero().squeeze()
-        #         low = torch.quantile(atten_weight[nonzero], 0.1)
-        #         high = torch.quantile(atten_weight[nonzero], 0.9)
-        #         atten_weight[nonzero] = atten_weight[nonzero].clip(low, high)
-        #         word_atten_weights.append(atten_weight.clone())
-        #     word_atten_weights = torch.stack(word_atten_weights)
-        #     # TODO: maybe clip the tensor of 10 percentile and 90 percentile
-
-        # word_atten_weights /= word_atten_weights.sum(dim=1, keepdims=True)
-                    #############################
-        # print("shapessss",word_emb_q.shape,word_atten_weights.shape)
-        # print("tessttttt",(torch.sum(word_emb_q * word_atten_weights.unsqueeze(-1))).shape)
-        # patch_atten_output, patch_weights = self.patch_local_atten_layer(patch_emb_q, word_emb_q * word_atten_weights.unsqueeze(-1), word_emb_q * word_atten_weights.unsqueeze(-1), key_padding_mask=mask_pad,need_weights=True)  # ****
-        # print("ppppppppppppppppppppppppppppppppp",patch_emb_q.shape,word_emb_q.shape)
-        ####deleted
-        # patch_atten_output, patch_weights = self.patch_local_atten_layer(patch_emb_q, word_emb_q , word_emb_q, key_padding_mask=mask_pad,need_weights=True)  # ****
-#######
-
-
-        #############&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-        # self.patch_local_atten_layer = CrossAttention(512,"img_txt",sents)
-            
-        # self.word_local_atten_layer = CrossAttention(512,"txt_img",sents)
         ##############&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
         patch_atten_output, patch_weights, new_patch_emb_q = self.patch_local_atten_layer(patch_emb_q,word_emb_q,sents)#(patch_emb_q, word_emb_q , word_emb_q , key_padding_mask=mask_pad,need_weights=True) 
@@ -3057,295 +2171,35 @@ class image_text_attention(torch.nn.Module):
         print("dddddddddddddddd", img_emb_q.shape, report_emb_q.shape, new_patch_emb_q.shape, new_word_emb_q.shape)
         return  img_emb_q,report_emb_q,new_patch_emb_q,new_word_emb_q,sents,patch_weights,word_weights,cap_lens,patch_atten_output,word_atten_output,merged_att
 
-# class downstream_image_classifier(torch.nn.Module):
-#     def __init__(self,emb_dim,num_heads):
-#         super().__init__()
-
-#         inplanes=[64, 128, 256, 512]
-#         self.emb_dim=emb_dim
-#         self.cnn=ResNet_attention(BasicBlock,[1,1,1,1],model_depth=18, n_classes=1039,block_inplanes=inplanes,output_dim=self.emb_dim)	
-#         self.cnn.conv1 = nn.Conv3d(1, 64, kernel_size=(7, 7, 7), stride=(1, 2, 2), padding=(3, 3, 3), bias=False)
-#         for param in self.cnn.parameters():
-#             param.requires_grad = False
-        
-        
-#         num_intermediate_output = 64
-#         self.intermediate_layer = nn.Linear(128, num_intermediate_output) #256
-
-#         # Adding a final classification layer that takes in outputs 3
-#         self.final_classification_layer = nn.Linear(num_intermediate_output, 1)
-
-        
-
-		
-#     def forward(self, image):	                    
-#         img_feat_q, patch_feat_q  = self.cnn(image)
-#         img_emb_q = self.cnn.global_embed(img_feat_q)
-#         img_emb_q = F.normalize(img_emb_q, dim=-1)
-
-        
-#         intermediate = self.intermediate_layer(img_emb_q)
-        
-#         labels = self.final_classification_layer(intermediate)
-
-    
-#         return  labels
-
-class image_text_attention_prototype(torch.nn.Module):
-    def __init__(self,emb_dim,num_heads):
-        super().__init__()
 
 
-        self.emb_dim=emb_dim
-        self.num_heads=num_heads
-        self.num_prototypes = 2
-        self.freeze_prototypes_epochs= 1
-        self.proto_temperature: float = 0.2
-        inplanes=[64, 128, 256, 512]
-        self.cnn=ResNet_attention(BasicBlock,[1,1,1,1],model_depth=18, n_classes=1039,block_inplanes=inplanes,output_dim=self.emb_dim)	
-        self.cnn.conv1 = nn.Conv3d(1, 64, kernel_size=(7, 7, 7), stride=(1, 2, 2), padding=(3, 3, 3), bias=False)
-		# net.fc = net.fc = nn.Linear(512, 1)#3) #512		
-        # Below lines are for sentence embedding which has size 150 for self_trained_embedding
-       
-        self.transformer=BertClassifier_attention(output_dim=self.emb_dim)
-        
-        # Adding intermediate linear layer before final classification
-        num_intermediate_output = 64
-        self.intermediate_layer = nn.Linear(256, num_intermediate_output) #256
-
-        # Adding a final classification layer that takes in outputs 3
-        self.final_classification_layer = nn.Linear(num_intermediate_output, 1)
-
-        # patch local attention layer
-        self.patch_local_atten_layer = nn.MultiheadAttention(
-            self.emb_dim, self.num_heads, batch_first=True)
-        # sentence local attention layer
-        self.word_local_atten_layer = nn.MultiheadAttention(
-            self.emb_dim, self.num_heads, batch_first=True)
-
-        self.prototype_layer = nn.Linear(self.emb_dim, self.num_prototypes, bias=False)
-        self.sinkhorn_iterations: int = 3
-        self.epsilon: float = 0.05
-
-        # if self._use_ddp_or_dpp2(self.trainer):
-        #     self.get_assignments = self.distributed_sinkhorn
-        # else:
-        self.get_assignments = self.sinkhorn
-		
-    def forward(self, image, input_ids, attention_mask = None):
-        # print("batch1 started")		                    
-        img_feat_q, patch_feat_q  = self.cnn(image)
-        # print("path",patch_feat_q.shape)
-        patch_emb_q = self.cnn.local_embed(patch_feat_q)
-        patch_emb_q = F.normalize(patch_emb_q, dim=-1)
-        # patch_emb_q = rearrange(patch_emb_q, "b  w h l c-> b  (w h l) c")
-        # patch_emb_q = rearrange(patch_emb_q, "b  w c h l -> b   (w h l) c")  ########****
-        # print("nextt,",patch_emb_q.shape)
-        img_emb_q = self.cnn.global_embed(img_feat_q)
-        img_emb_q = F.normalize(img_emb_q, dim=-1)
-                
-        # Pass sentence embedding through linear layers
-        all_features,report_feat_q, word_feat_q, word_attn_q, sents = self.transformer(input_ids, attention_mask)
-        # print("img_emb_q",img_emb_q.shape)
-
-        word_emb_q = self.transformer.local_embed(word_feat_q)
-        word_emb_q = F.normalize(word_emb_q, dim=-1)
-        report_emb_q = self.transformer.global_embed(report_feat_q)
-        report_emb_q = F.normalize(report_emb_q, dim=-1)
         
 
 
 
-        combined = torch.cat((img_emb_q, report_emb_q), axis=1)
-        intermediate = self.intermediate_layer(combined)
-        # intermediate = self.intermediate_layer(img_emb_q)
-        
-        # Get final labels
-        labels = self.final_classification_layer(intermediate)
 
-        mask_pad = torch.from_numpy(np.array(sents)[:, 1:] == "<pad>").type_as(image).bool()  #[PAD]"      
-        # print("PPPP",patch_emb_q.shape)
-        patch_atten_output, _ = self.patch_local_atten_layer(patch_emb_q, word_emb_q, word_emb_q, key_padding_mask=mask_pad,need_weights=True)
-        patch_atten_output = F.normalize(patch_atten_output, dim=-1)
-        word_atten_output, _ = self.word_local_atten_layer(word_emb_q, patch_emb_q, patch_emb_q,need_weights=True)
-        word_atten_output = F.normalize(word_atten_output, dim=-1)
-
-
-
-        #prototype
-        with torch.no_grad():
-            w = self.prototype_layer.weight.data.clone()
-            w = F.normalize(w, dim=1, p=2)
-            self.prototype_layer.weight.copy_(w)
-
-        # Compute assign code of images
-        img_proto_out = self.prototype_layer(img_emb_q)
-        report_proto_out = self.prototype_layer(report_emb_q)
-
-        # TODO: define this to hparams
-        with torch.no_grad():
-            img_code = torch.exp(
-                img_proto_out / self.epsilon).t()
-            img_code = self.get_assignments(
-                img_code, self.sinkhorn_iterations)         # bz, 500
-            report_code = torch.exp(
-                report_proto_out / self.epsilon).t()
-            report_code = self.get_assignments(
-                report_code, self.sinkhorn_iterations)       # bz, 500
-
-        img_proto_prob = F.softmax(
-            img_proto_out / self.proto_temperature, dim=1)
-        report_proto_prob = F.softmax(
-            report_proto_out / self.proto_temperature, dim=1)
-
-
-
-        return  labels,img_emb_q,report_emb_q,patch_emb_q,word_emb_q,word_attn_q,sents,patch_atten_output,word_atten_output#,img_code,report_code,img_proto_prob,report_proto_prob
-
-    def sinkhorn(self, Q, nmb_iters):
-        ''' 
-            :param Q: (num_prototypes, batch size)
-        '''
-        with torch.no_grad():
-            sum_Q = torch.sum(Q)
-            Q /= sum_Q
-
-            K, B = Q.shape
-
-            # if self.hparams.gpus > 0:
-            u = torch.zeros(K).cuda()
-            r = torch.ones(K).cuda() / K
-            c = torch.ones(B).cuda() / B
-            # else:
-            #     u = torch.zeros(K)
-            #     r = torch.ones(K) / K
-            #     c = torch.ones(B) / B
-
-            for _ in range(nmb_iters):
-                u = torch.sum(Q, dim=1)
-                Q *= (r / u).unsqueeze(1)
-                Q *= (c / torch.sum(Q, dim=0)).unsqueeze(0)
-
-            return (Q / torch.sum(Q, dim=0, keepdim=True)).t().float()
-
-    def distributed_sinkhorn(self, Q, nmb_iters):
-        with torch.no_grad():
-            sum_Q = torch.sum(Q)
-            dist.all_reduce(sum_Q)
-            Q /= sum_Q
-
-            if self.hparams.gpus > 0:
-                u = torch.zeros(Q.shape[0]).cuda(non_blocking=True)
-                r = torch.ones(Q.shape[0]).cuda(non_blocking=True) / Q.shape[0]
-                c = torch.ones(Q.shape[1]).cuda(
-                    non_blocking=True) / (self.gpus * Q.shape[1])
-            else:
-                u = torch.zeros(Q.shape[0])
-                r = torch.ones(Q.shape[0]) / Q.shape[0]
-                c = torch.ones(Q.shape[1]) / (self.gpus * Q.shape[1])
-
-            curr_sum = torch.sum(Q, dim=1)
-            dist.all_reduce(curr_sum)
-
-            for it in range(nmb_iters):
-                u = curr_sum
-                Q *= (r / u).unsqueeze(1)
-                Q *= (c / torch.sum(Q, dim=0)).unsqueeze(0)
-                curr_sum = torch.sum(Q, dim=1)
-                dist.all_reduce(curr_sum)
-            return (Q / torch.sum(Q, dim=0, keepdim=True)).t().float()
-
-    @staticmethod
-    def _use_ddp_or_dpp2(trainer: Trainer) -> bool:
-        if trainer:
-            return isinstance(trainer.training_type_plugin, (DDPPlugin, DDP2Plugin))
-        else:
-            return torch.distributed.is_initialized()
+  
 
 
 
 
 
 
-
-class downstream_image_classifier(torch.nn.Module):
-    def __init__(self):
-        super().__init__()
-
-        inplanes=[64, 128, 256, 512]
-        self.emb_dim=512
-        self.cnn=ResNet_attention(BasicBlock,[2,2,2,2],model_depth=18, n_classes=1039,block_inplanes=inplanes,output_dim=self.emb_dim)	
-        self.cnn.conv1 = nn.Conv3d(1, 64, kernel_size=(7, 7, 7), stride=(2, 2, 2), padding=(3, 3, 3), bias=False)
-        self.cnn.fc = nn.Linear(512, 1)
-        for param in self.cnn.parameters():
-            param.requires_grad = False
-        
-        
-        num_intermediate_output = 64
-        self.intermediate_layer = nn.Linear(128, num_intermediate_output) #256
-
-        # Adding a final classification layer that takes in outputs 3
-        # self.final_classification_layer = nn.Linear(num_intermediate_output, 1)
-        self.gap = nn.AdaptiveAvgPool2d(1) # gap = GlobalAveragePooling
-        self.relu = nn.ReLU(inplace=True)
-        # self.fc1 = nn.Linear(512, 256)
-        self.do = nn.Dropout(0.5)
-        self.projection_region = nn.Linear(self.cnn.output_dim, 128)
-        self.projection_global = nn.Linear(self.cnn.output_dim, 128)
-
-        
-
-		
-    def forward(self, image):	                    
-        img_feat_q, patch_feat_q  = self.cnn(image)
-        img_emb_q = self.cnn.global_embed(img_feat_q)
-        img_emb_q = F.normalize(img_emb_q, dim=-1)
-        patch_emb_q = self.cnn.local_embed(patch_feat_q)
-        patch_emb_q = F.normalize(patch_emb_q, dim=-1)
-        print("embedds",img_emb_q.shape,patch_emb_q.shape)
-        # g_p = torch.squeeze(self.gap(patch_emb_q)) # N, 512
-        g_p = self.gap(patch_emb_q) 
-        print("g_p",g_p.shape)
-        f_r = self.relu(self.projection_region(self.do(g_p))) # N, 256
-        f_g = self.relu(self.projection_global(self.do(img_emb_q))) # N, 256
-        print("f_g",f_g.shape)
-        net = torch.cat((f_r,f_g), dim=-1) #  N, 512 + 512 (1024 --> 512 --> 256 --> 14)
-
-        
-        # intermediate = self.intermediate_layer(net)
-        
-        # labels = self.final_classification_layer(intermediate)
-
-        labels=self.cnn.fc(net)
-        return  labels
 
 class downstream_image_classifier(torch.nn.Module):
     def __init__(self):
         super().__init__()
         print("YES")
         inplanes=[64, 128, 256, 512]
-        # inplanes=[128, 256, 512,1024]
+        
         self.cnn=ResNet_attention2(True,BasicBlock,[2,2,2,2],model_depth=18,block_inplanes=inplanes,output_dim=512,n_classes=1039,mode="downstream")	
-        # self.cnn = ResNet_attention(True, BasicBlock, [2, 2, 2, 2],mode="downstream")
-        # self.cnn=ResNet_attention(BasicBlock,[2,2,2,2],model_depth=18, n_classes=1039,block_inplanes=inplanes)	
+        	
 
         self.cnn.conv1 = nn.Conv3d(1, 64, kernel_size=7, stride=(2, 2, 2), padding=(3, 3, 3), bias=False)
-        # for param in self.cnn.parameters():
-        #     param.requires_grad = False
-        
-        
-        # num_intermediate_output = 128
-        # self.intermediate_layer = nn.Linear(128, num_intermediate_output) #256
-
-        # Adding a final classification layer that takes in outputs 3
-        # self.fc = nn.Linear(num_intermediate_output, 1)el
-        self.gap = nn.AdaptiveAvgPool2d(1) # gap = GlobalAveragePooling
+       
         self.relu = nn.ReLU(inplace=True)
         
 
-        # self.do = nn.Dropout(0.5)
-        # self.projection_region = nn.Linear(self.cnn.output_dim, 128)
-        # self.projection_global = nn.Linear(self.cnn.output_dim, 128)
 
         
 
@@ -3357,29 +2211,7 @@ class downstream_image_classifier(torch.nn.Module):
             labels  = self.cnn.fc1(self.cnn.fc(img_feat_q))
             
             return  labels,attn
-        # img_emb_q = self.cnn.global_embed(img_feat_q)
-        # img_emb_q = F.normalize(img_emb_q, dim=-1)
-        # patch_emb_q = self.cnn.local_embed(patch_feat_q)
-        # patch_emb_q = F.normalize(patch_emb_q, dim=-1)
-
-        # g_p = torch.squeeze(self.gap(patch_emb_q)) # N, 512
-        # f_r = self.relu(self.projection_region(self.do(g_p))) # N, 256
-        # f_g = self.relu(self.projection_global(self.do(img_emb_q))) # N, 256
-        # net = torch.cat((f_r,f_g), dim=-1) #  N, 512 + 512 (1024 --> 512 --> 256 --> 14)
         
-        # x = self.dropout(x)
-
-        # x = self.avgpool(x)
-
-        # x = x.view(x.size(0), -1)
-        # # x = self.fc(x)
-        # intermediate = self.intermediate_layer(img_emb_q)
-        
-            
-        # labels=self.cnn.fc(img_feat_q)
-            
-            
-           #,attention_weight#(nn.Sigmoid()(labels)>= 0.5).squeeze().to(torch.long)#,attention_weight
         else:
             
             img_feat_q = self.cnn(image)
@@ -3389,372 +2221,19 @@ class downstream_image_classifier(torch.nn.Module):
             return  labels
 
 
-class downstream_image_text_classifier(torch.nn.Module):
-    def __init__(self,emb_dim,num_heads):
-        super().__init__()
 
-        inplanes=[64, 128, 256, 512]
-        self.emb_dim=emb_dim
-        self.cnn=ResNet_attention(True,BasicBlock,[1,1,1,1],model_depth=18, n_classes=1039,block_inplanes=inplanes,output_dim=self.emb_dim,mode="downstream")	
-        self.cnn.conv1 = nn.Conv3d(1, 64, kernel_size=(7, 7, 7), stride=(1, 2, 2), padding=(3, 3, 3), bias=False)
-        self.transformer=BertClassifier_attention(output_dim=self.emb_dim)
-        self.gap = nn.AdaptiveAvgPool2d(128) # gap = GlobalAveragePooling
-        self.relu = nn.ReLU(inplace=True)
-        self.fc1 = nn.Linear(512, 256)
-        self.do = nn.Dropout(0.1)
-        
-        self.projection_region = nn.Linear(self.cnn.output_dim, 64)
-        self.projection_global = nn.Linear(self.cnn.output_dim, 64)
-        # for param in self.cnn.parameters():
-        #     param.requires_grad = False
-        # for param in self.cnn.layer4.parameters():
-        #     param.requires_grad = True
-        
-        # for param in self.transformer.parameters():
-        #     param.requires_grad = False
-        
-        num_intermediate_output = 64#128
-        self.intermediate_layer = nn.Linear(128 , num_intermediate_output) #256
 
-        # Adding a final classification layer that takes in outputs 3
-        self.final_classification_layer = nn.Linear(num_intermediate_output, 1)
 
-        
 
-		
-    def forward(self, image, input_ids, attention_mask = None):	                    
-        img_feat_q, patch_feat_q  = self.cnn(image)
-        img_emb_q = self.cnn.global_embed(img_feat_q)
-        # print(img_emb_q.shape)
-        img_emb_q = F.normalize(img_emb_q, dim=-1)
-        patch_emb_q = self.cnn.local_embed(patch_feat_q)
-        patch_emb_q = rearrange(patch_emb_q, "b c w h l-> b (w h l) c") ####(#(((#((#(#)))))))
-        patch_emb_q = F.normalize(patch_emb_q, dim=-1)
-        g_p = torch.squeeze(self.gap(patch_emb_q)) # N, 512
-        f_r = self.relu(self.projection_region(self.do(g_p))) # N, 256
-        f_r = f_r.view(f_r.size(0),-1)
-        f_g = self.relu(self.projection_global(self.do(img_emb_q))) # N, 256
-        net = f_g#torch.cat((f_r,f_g), dim=-1)
 
-        report_feat_q, word_feat_q, word_attn_q, sents = self.transformer(input_ids, attention_mask)
-        # print("img_emb_q",img_emb_q.shape)
 
-        word_emb_q = self.transformer.local_embed(word_feat_q)
-        word_emb_q = F.normalize(word_emb_q, dim=-1)
-        report_emb_q = self.transformer.global_embed(report_feat_q)
-        report_emb_q = F.normalize(report_emb_q, dim=-1)
 
-        t_g_p = torch.squeeze(self.gap(word_emb_q)) # N, 512
-        t_f_r = self.relu(self.projection_region(self.do(t_g_p))) # N, 256
-        t_f_g = self.relu(self.projection_global(self.do(report_emb_q))) # N, 256
-        t_f_r = t_f_r.view(f_r.size(0),-1)
-        t_net = t_f_g#torch.cat((t_f_r,t_f_g), dim=-1) #  N, 512 + 512 (1024 --> 512 --> 256 --> 14)
 
-        
-        
-        combined = torch.cat((net, t_net), axis=1)
-        
-        intermediate = self.intermediate_layer(combined)
-        
-        labels = self.final_classification_layer(intermediate)
 
-    
-        return  labels
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-class image_text_attention_test(torch.nn.Module):
-    def __init__(self,emb_dim,num_heads):
-        super().__init__()
-
-
-        self.emb_dim=emb_dim
-        self.num_heads=num_heads
-        self.num_prototypes = 2
-        self.freeze_prototypes_epochs= 1
-        self.proto_temperature: float = 0.2
-        inplanes=[64, 128, 256, 512]
-        self.cnn=ResNet_attention(BasicBlock,[1,1,1,1],model_depth=18, n_classes=1039,block_inplanes=inplanes,output_dim=self.emb_dim)	
-        self.cnn.conv1 = nn.Conv3d(1, 64, kernel_size=(7, 7, 7), stride=(1, 2, 2), padding=(3, 3, 3), bias=False)
-		# net.fc = net.fc = nn.Linear(512, 1)#3) #512		
-        # Below lines are for sentence embedding which has size 150 for self_trained_embedding
-       
-        self.transformer=BertClassifier_attention(output_dim=self.emb_dim)
-        
-        # Adding intermediate linear layer before final classification
-        num_intermediate_output = 64
-        self.intermediate_layer = nn.Linear(256, num_intermediate_output) #256
-
-        # Adding a final classification layer that takes in outputs 3
-        self.final_classification_layer = nn.Linear(128, 1)
-
-        # patch local attention layer
-        self.patch_local_atten_layer = nn.MultiheadAttention(
-            self.emb_dim, self.num_heads, batch_first=True)
-        # sentence local attention layer
-        self.word_local_atten_layer = nn.MultiheadAttention(
-            self.emb_dim, self.num_heads, batch_first=True)
-
-        self.prototype_layer = nn.Linear(self.emb_dim, self.num_prototypes, bias=False)
-        self.sinkhorn_iterations: int = 3
-        self.epsilon: float = 0.05
-
-        # if self._use_ddp_or_dpp2(self.trainer):
-        #     self.get_assignments = self.distributed_sinkhorn
-        # else:
-        self.get_assignments = self.sinkhorn
-		
-    def forward(self, image, input_ids, attention_mask = None):
-        # print("batch1 started")		                    
-        img_feat_q, patch_feat_q  = self.cnn(image)
-        # print("path",patch_feat_q.shape)
-        patch_emb_q = self.cnn.local_embed(patch_feat_q)
-        patch_emb_q = F.normalize(patch_emb_q, dim=-1)
-        # patch_emb_q = rearrange(patch_emb_q, "b  w h l c-> b  (w h l) c")
-        # patch_emb_q = rearrange(patch_emb_q, "b  w c h l -> b   (w h l) c")  ########****
-        # print("nextt,",patch_emb_q.shape)
-        img_emb_q = self.cnn.global_embed(img_feat_q)
-        img_emb_q = F.normalize(img_emb_q, dim=-1)
-                
-        # Pass sentence embedding through linear layers
-        all_features,report_feat_q, word_feat_q, word_attn_q, sents = self.transformer(input_ids, attention_mask)
-        # print("img_emb_q",img_emb_q.shape)
-        # print("all_features_text",all_features.shape,report_feat_q.shape)
-        # print("all_features_image",img_feat_q.shape)
-
-        word_emb_q = self.transformer.local_embed(word_feat_q)
-        word_emb_q = F.normalize(word_emb_q, dim=-1)
-        report_emb_q = self.transformer.global_embed(report_feat_q)
-        report_emb_q = F.normalize(report_emb_q, dim=-1)
-        
-
-
-
-        combined = torch.cat((img_emb_q, report_emb_q), axis=1)
-        intermediate = self.intermediate_layer(combined)
-        # intermediate = self.intermediate_layer(img_emb_q)
-        
-        # Get final labels
-        labels = self.final_classification_layer(intermediate)
-
-        mask_pad = torch.from_numpy(np.array(sents)[:, 1:] == "<pad>").type_as(image).bool()  #[PAD]"      
-        # print("PPPP",patch_emb_q.shape)
-        patch_atten_output, _ = self.patch_local_atten_layer(patch_emb_q, word_emb_q, word_emb_q, key_padding_mask=mask_pad,need_weights=True)
-        patch_atten_output = F.normalize(patch_atten_output, dim=-1)
-        word_atten_output, _ = self.word_local_atten_layer(word_emb_q, patch_emb_q, patch_emb_q,need_weights=True)
-        word_atten_output = F.normalize(word_atten_output, dim=-1)
-
-
-
-        #prototype
-        # with torch.no_grad():
-        #     w = self.prototype_layer.weight.data.clone()
-        #     w = F.normalize(w, dim=1, p=2)
-        #     self.prototype_layer.weight.copy_(w)
-
-        # # Compute assign code of images
-        # img_proto_out = self.prototype_layer(img_emb_q)
-        # report_proto_out = self.prototype_layer(report_emb_q)
-
-        # # TODO: define this to hparams
-        # with torch.no_grad():
-        #     img_code = torch.exp(
-        #         img_proto_out / self.epsilon).t()
-        #     img_code = self.get_assignments(
-        #         img_code, self.sinkhorn_iterations)         # bz, 500
-        #     report_code = torch.exp(
-        #         report_proto_out / self.epsilon).t()
-        #     report_code = self.get_assignments(
-        #         report_code, self.sinkhorn_iterations)       # bz, 500
-
-        # img_proto_prob = F.softmax(
-        #     img_proto_out / self.proto_temperature, dim=1)
-        # report_proto_prob = F.softmax(
-        #     report_proto_out / self.proto_temperature, dim=1)
-
-
-
-        return  labels,img_emb_q,report_emb_q,patch_emb_q,word_emb_q,word_attn_q,sents,patch_atten_output,word_atten_output#,img_code,report_code,img_proto_prob,report_proto_prob
-
-    def sinkhorn(self, Q, nmb_iters):
-        ''' 
-            :param Q: (num_prototypes, batch size)
-        '''
-        with torch.no_grad():
-            sum_Q = torch.sum(Q)
-            Q /= sum_Q
-
-            K, B = Q.shape
-
-            # if self.hparams.gpus > 0:
-            u = torch.zeros(K).cuda()
-            r = torch.ones(K).cuda() / K
-            c = torch.ones(B).cuda() / B
-            # else:
-            #     u = torch.zeros(K)
-            #     r = torch.ones(K) / K
-            #     c = torch.ones(B) / B
-
-            for _ in range(nmb_iters):
-                u = torch.sum(Q, dim=1)
-                Q *= (r / u).unsqueeze(1)
-                Q *= (c / torch.sum(Q, dim=0)).unsqueeze(0)
-
-            return (Q / torch.sum(Q, dim=0, keepdim=True)).t().float()
-
-    def distributed_sinkhorn(self, Q, nmb_iters):
-        with torch.no_grad():
-            sum_Q = torch.sum(Q)
-            dist.all_reduce(sum_Q)
-            Q /= sum_Q
-
-            if self.hparams.gpus > 0:
-                u = torch.zeros(Q.shape[0]).cuda(non_blocking=True)
-                r = torch.ones(Q.shape[0]).cuda(non_blocking=True) / Q.shape[0]
-                c = torch.ones(Q.shape[1]).cuda(
-                    non_blocking=True) / (self.gpus * Q.shape[1])
-            else:
-                u = torch.zeros(Q.shape[0])
-                r = torch.ones(Q.shape[0]) / Q.shape[0]
-                c = torch.ones(Q.shape[1]) / (self.gpus * Q.shape[1])
-
-            curr_sum = torch.sum(Q, dim=1)
-            dist.all_reduce(curr_sum)
-
-            for it in range(nmb_iters):
-                u = curr_sum
-                Q *= (r / u).unsqueeze(1)
-                Q *= (c / torch.sum(Q, dim=0)).unsqueeze(0)
-                curr_sum = torch.sum(Q, dim=1)
-                dist.all_reduce(curr_sum)
-            return (Q / torch.sum(Q, dim=0, keepdim=True)).t().float()
-
-    @staticmethod
-    def _use_ddp_or_dpp2(trainer: Trainer) -> bool:
-        if trainer:
-            return isinstance(trainer.training_type_plugin, (DDPPlugin, DDP2Plugin))
-        else:
-            return torch.distributed.is_initialized()
-
-
-
-
-
-
-
-
-
-
-class CrossAttention(nn.Module):
-    def __init__(self, in_channels):
-        super(SelfAttention, self).__init__()
-
-        # Define the key, query, and value linear transformations
-        self.key_conv = nn.Conv3d(in_channels, in_channels, kernel_size=1)
-        self.query_conv = nn.Conv3d(in_channels, in_channels, kernel_size=1)
-        self.value_conv = nn.Conv3d(in_channels, in_channels, kernel_size=1)
-        self.gamma = nn.Parameter(torch.zeros(1))
-        # Attention softmax
-        self.softmax = nn.Softmax(dim=-1)
-        self.mask_pad = torch.from_numpy((np.array(sents)[:, 1:] == "<pad>")|(np.array(sents)[:, 1:] =='<s>')|(np.array(sents)[:, 1:] =='</s>')|(np.array(sents)[:, 1:] =='<mask>')|(np.array(sents)[:, 1:] =='unk')|(np.array(sents)[:, 1:] =='')|(np.array(sents)[:, 1:] =='Ċ')).type_as(image).bool()
-        
-    def forward(self, x):
-        # Compute key, query, and value tensors
-        key = self.key_conv(x)
-        query = self.query_conv(x)
-        value = self.value_conv(x)
-
-        # Reshape keys, queries, and values
-        # keys = keys.view(keys.size(0), keys.size(-1) * keys.size(-2) * keys.size(-3),-1)
-        # queries = queries.view(queries.size(0), queries.size(-1) * queries.size(-2) * queries.size(-3),-1)
-        # values = values.view(values.size(0), values.size(-1) * values.size(-2) * values.size(-3),-1)
-        batch_size, channels, depth, height, width = x.size()
-        query = query.view(batch_size, channels, -1)
-        key = key.view(batch_size, channels, -1)
-        value = value.view(batch_size, channels, -1)
-
-
-        # Compute attention scores
-        # print("qqq",queries.shape,keys.shape,values.shape)
-        attention = torch.matmul(query.permute(0, 2, 1), key)  #keys.transpose(1, 2)
-        attention = self.softmax(attention)
-
-        # Apply attention to values
-        # print("shapes",values.shape,attention.shape)
-        # print("value",value.shape)
-        out = torch.matmul(attention, value.permute(0, 2, 1))
-        print("out_cros",out.shape)
-        out = out.view(batch_size, channels, depth, height, width)
-        out = out.permute(0,2,3,4,1)
-        # Residual connection and scaling
-        out = self.gamma * out + x
-        out = out.view(batch_size, depth* height* width,channels)
-        out=out.mean(1)
-        # print("HII",out.shape,attention.shape)
-        return out,attention
-
-
-
-class CrossAttention(nn.Module):
-    def __init__(self, in_channels):
-        super(SelfAttention, self).__init__()
-
-        # Define the key, query, and value linear transformations
-        self.key_conv = nn.Conv3d(in_channels, in_channels, kernel_size=1)
-        self.query_conv = nn.Conv3d(in_channels, in_channels, kernel_size=1)
-        self.value_conv = nn.Conv3d(in_channels, in_channels, kernel_size=1)
-        
-        # Attention softmax
-        self.softmax = nn.Softmax(dim=-1)
-
-    def forward(self, x):
-        # Compute key, query, and value tensors
-        key = self.key_conv(x)
-        query = self.query_conv(x)
-        value = self.value_conv(x)
-
-        # Reshape keys, queries, and values
-        # keys = keys.view(keys.size(0), keys.size(-1) * keys.size(-2) * keys.size(-3),-1)
-        # queries = queries.view(queries.size(0), queries.size(-1) * queries.size(-2) * queries.size(-3),-1)
-        # values = values.view(values.size(0), values.size(-1) * values.size(-2) * values.size(-3),-1)
-        batch_size, channels, depth, height, width = x.size()
-        query = query.view(batch_size, channels, -1)
-        key = key.view(batch_size, channels, -1)
-        value = value.view(batch_size, channels, -1)
-
-
-        # Compute attention scores
-        # print("qqq",queries.shape,keys.shape,values.shape)
-        attention = torch.matmul(query.permute(0, 2, 1), key)  #keys.transpose(1, 2)
-        attention = self.softmax(attention)
-
-        # Apply attention to values
-        # print("shapes",values.shape,attention.shape)
-        # print("value",value.shape)
-        out = torch.matmul(attention, value.permute(0, 2, 1))
-        out = out.view(batch_size, channels, depth, height, width)
-
-        # Residual connection and scaling
-        out = self.gamma * out + x
-        out = out.view(batch_size, depth* height* width,channels)
-        out=out.mean(1)
-        # print("HII",out.shape,attention.shape)
-        return out,attention
 
 def propmt_generator(label):
     tokenizer = LongformerTokenizerFast.from_pretrained("yikuan8/Clinical-Longformer")
@@ -3775,459 +2254,27 @@ def propmt_generator(label):
 
 
 
-def calc_similarity(global_text_embedding ,local_text_embedding, global_img_embedding, local_image_embedding, patch_atten_output , word_atten_output):
-
-    global_img_embedding = global_img_embedding.detach().cpu().numpy()
-    global_text_embedding = global_text_embedding.detach().cpu().numpy()
-    bz = global_text_embedding.shape[0]
-    global_similarity = metrics.pairwise.cosine_similarity(global_img_embedding, global_text_embedding)
-
-    local_similarity_i_t = F.cosine_similarity(patch_atten_output.reshape(bz,-1).unsqueeze(1), local_image_embedding.reshape(bz,-1).unsqueeze(0), dim=-1)
-    local_similarity_t_i = F.cosine_similarity(word_atten_output.reshape(bz,-1).unsqueeze(1), local_text_embedding.reshape(bz,-1).unsqueeze(0), dim=-1)
-
-    local_similarity = local_similarity_i_t #+ local_similarity_t_i
-    global_similarity = torch.Tensor(global_similarity).cuda()
-    similarity = (global_similarity + local_similarity)/2
-    return similarity
 
 
 
 
-def zeroshot_classifier(label_list, image , model):
-    
-    # min_similarity = 0 
-    model = model.cuda()
-    # predicted_label = 0
-    print("label_list",label_list)
-    similarity_list = []
-    for label in label_list:
-        tokenized_label_text = propmt_generator(label)
-        
-        text_model = model.transformer
-        img_model= model.cnn
-        
-        with torch.no_grad():
-            image = image.float()
-            img_feat_q, patch_feat_q  = img_model(image)
-        
-            local_image_embedding = img_model.local_embed(patch_feat_q) # ****
-            local_image_embedding = F.normalize(local_image_embedding, dim=-1)   #****
-                    
-            global_img_embedding = img_feat_q
-            global_img_embedding = F.normalize(global_img_embedding, dim=-1)
 
 
 
 
-            attention_mask = tokenized_label_text['attention_mask']
-            attention_mask = attention_mask.cuda()
-            input_id = tokenized_label_text['input_ids'].squeeze(1)
-            input_id = input_id.cuda()
-            report_feat_q, word_feat_q, sents ,_ = text_model(input_id, attention_mask)
-            print("word_feat_q",word_feat_q.shape)
-            local_text_embedding = text_model.local_embed(word_feat_q)  
-            local_text_embedding = F.normalize(local_text_embedding, dim=-1)
-            global_text_embedding = text_model.global_embed(report_feat_q)
-            global_text_embedding = F.normalize(global_text_embedding, dim=-1)
-            padding_mask_list=['<s>', '</s>', '<pad>','<mask>' , 'unk','','Ċ']
-            mask_pad = torch.from_numpy((np.array(sents)[:, 1:] == "<pad>")|(np.array(sents)[:, 1:] =='<s>')|(np.array(sents)[:, 1:] =='</s>')|(np.array(sents)[:, 1:] =='<mask>')|(np.array(sents)[:, 1:] =='unk')|(np.array(sents)[:, 1:] =='')|(np.array(sents)[:, 1:] =='Ċ')).type_as(image).bool()
-            print("patchhh", local_image_embedding.shape , local_text_embedding.shape )
-            patch_atten_output, patch_weights,_ = model.patch_local_atten_layer(local_image_embedding,local_text_embedding,sents)
-            
-            word_atten_output, word_weights,_ = model.word_local_atten_layer(local_image_embedding,local_text_embedding,sents)
-            
-            # patch_weights = F.normalize(patch_weights, dim=-1)
-            # word_weights = F.normalize(word_weights, dim=-1)
-            cap_lens = [
-                len([w for w in sent if not w.startswith("[")]) -1 for sent in sents
-            ] 
-              
-            
-        similarity = calc_similarity(global_text_embedding ,local_text_embedding, global_img_embedding, local_image_embedding , patch_atten_output , word_atten_output)
-        # print("simmm",similarity)
-        # print("similarity",similarity)
-        similarity_list.append(similarity)
-        # if similarity>=min_similarity:
-        #     predicted_label = label
-    print("similarity_list",similarity_list)
-    print("arayyy",np.array(similarity_list).shape)
-    predicted_label = np.argmax(np.array(similarity_list))
-    return predicted_label
-
-
-
-
-def fewshot_classifier(query_image, support_dl , model):
-    
-    
-    model = model.cuda()
-   
-    # similarity_list = []
-    with torch.no_grad():
-        img_model= model.cnn
-        query_image = query_image.float()
-        img_feat_q, patch_feat_q  = img_model(query_image)
-    
-        local_image_embedding = img_model.local_embed(patch_feat_q) # ****
-        local_image_embedding = F.normalize(local_image_embedding, dim=-1)   #****
-                
-        global_img_embedding = img_feat_q
-        global_img_embedding = F.normalize(global_img_embedding, dim=-1)
-        max_sim = 0
-        for support_images,labels in support_dl:
-            
-            support_images,labels = support_images.cuda().float(), labels.cuda().float()
-            img_feat_q, patch_feat_q  = img_model(support_images)
-    
-            local_support_embedding = img_model.local_embed(patch_feat_q) # ****
-            local_support_embedding = F.normalize(local_image_embedding, dim=-1)   #****
-                    
-            global_support_embedding = img_feat_q
-            global_support_embedding = F.normalize(global_img_embedding, dim=-1)
-            
-        
-        
-       
-            similarity = calc_similarity(global_support_embedding ,local_support_embedding, global_img_embedding, local_image_embedding , local_image_embedding , local_image_embedding)
-            if similarity>max_sim:
-                max_sim = similarity
-                predicted_label = labels
-                print("fewwwwwwwwwwwwwww",predicted_label,similarity)
-            # similarity_list.append(similarity)
-        # if similarity>=min_similarity:
-        #     predicted_label = label
-    # print("similarity_list",similarity_list)
-    # print("arayyy",np.array(similarity_list).shape)
-    # predicted_label = np.argmax(np.array(similarity_list))
-    return predicted_label
 
 
              
 
 
-class MultiHeadSelfAttention(nn.Module):
-    def __init__(self, in_channels):
-        super(MultiHeadSelfAttention, self).__init__()
-
-        num_heads = 2
-        self.num_heads = num_heads
-        head_dim = in_channels // num_heads
-
-        # Define separate linear transformations for keys, queries, and values for each attention head
-        self.key_conv = nn.ModuleList([nn.Conv3d(in_channels, head_dim, kernel_size=1) for _ in range(num_heads)])
-        self.query_conv = nn.ModuleList([nn.Conv3d(in_channels, head_dim, kernel_size=1) for _ in range(num_heads)])
-        self.value_conv = nn.ModuleList([nn.Conv3d(in_channels, head_dim, kernel_size=1) for _ in range(num_heads)])
-        self.gamma = nn.Parameter(torch.zeros(1))
-        self.softmax = nn.Softmax(dim=-1)
-        self.dropout = nn.Dropout(p=0.25)
-
-    def forward(self, x):
-        batch_size, channels, height, width, depth = x.size()
-
-        # Compute key, query, and value tensors for each attention head
-        keys = [key_conv(x).view(batch_size, -1, depth) for key_conv in self.key_conv]
-        queries = [query_conv(x).view(batch_size, -1, depth) for query_conv in self.query_conv]
-        values = [value_conv(x).view(batch_size, -1, depth) for value_conv in self.value_conv]
-
-        # Concatenate outputs of each attention head
-        keys = torch.cat(keys, dim=1)
-        queries = torch.cat(queries, dim=1)
-        values = torch.cat(values, dim=1)
-
-        # Compute attention scores
-        attention = torch.matmul(queries.permute(0, 2, 1), keys)
-        attention /= self.num_heads  # Scale by the number of heads
-        attention = self.softmax(attention)
-        attention = self.dropout(attention)
-
-        # Apply attention to values
-        out = torch.matmul(attention, values.permute(0, 2, 1))
-        out = out.view(batch_size, channels, depth)
-
-        # Residual connection and scaling
-        out = self.gamma * out + x
-
-        return out, attention
-
-
-
-
-class MultiHeadDepthAttention(nn.Module):
-    def __init__(self, in_channels):
-        super(MultiHeadDepthAttention, self).__init__()
-
-        # Define the key, query, and value linear transformations
-
-        num_heads = 2
-        self.num_heads = num_heads
-        # head_dim = in_channels // num_heads
-        head_dim = in_channels*height*width // num_heads
-        # Define separate linear transformations for keys, queries, and values for each attention head
-        self.key_conv = nn.ModuleList([nn.Conv3d(in_channels, head_dim, kernel_size=1) for _ in range(num_heads)])
-        self.query_conv = nn.ModuleList([nn.Conv3d(in_channels, head_dim, kernel_size=1) for _ in range(num_heads)])
-        self.value_conv = nn.ModuleList([nn.Conv3d(in_channels, head_dim, kernel_size=1) for _ in range(num_heads)])
-        self.gamma = nn.Parameter(torch.zeros(1))
-        self.softmax = nn.Softmax(dim=-1)
-        self.dropout = nn.Dropout(p=0.25)
-    def forward(self, x):
-        # Compute key, query, and value tensors
-        # print("x_aten",x.shape)
-        # Compute key, query, and value tensors for each attention head
-        batch_size, channels,  height, width ,depth= x.size()
-        
-        keys = [key_conv(x).view(batch_size,-1, depth) for key_conv in self.key_conv]
-        queries = [query_conv(x).view(batch_size, -1, depth) for query_conv in self.query_conv]
-        values = [value_conv(x).view(batch_size, -1, depth) for value_conv in self.value_conv]
-
-        keys = torch.cat(keys, dim=1)
-        queries = torch.cat(queries, dim=1)
-        values = torch.cat(values, dim=1)
-
-        # Reshape keys, queries, and values
-        # keys = keys.view(keys.size(0), keys.size(-1) * keys.size(-2) * keys.size(-3),-1)
-        # queries = queries.view(queries.size(0), queries.size(-1) * queries.size(-2) * queries.size(-3),-1)
-        # values = values.view(values.size(0), values.size(-1) * values.size(-2) * values.size(-3),-1)
-
-
-       
-        # x=x.mean(1)
-        # batch_size, height, width, depth = x.size()
- 
-
-        # query = query.view(batch_size, channels, -1)
-        # keys = key.view(batch_size, channels, -1)
-        # value = value.view(batch_size, channels, -1)
-
-        # query = query.view(batch_size, channels, -1)
-        # key = key.view(batch_size, channels, -1)
-        # value = value.view(batch_size, channels, -1)
-
-        # query = query.view(batch_size, height*width*channels, -1)
-        # # key = key.view(batch_size, height*width*channels, -1)
-
-        # query = query.view(batch_size, channels*height*width,-1)
-        # key = key.view(batch_size, channels*height*width,-1)
-        # # query = query.permute(0,1,-1,2)
-        # # key = key.permute(0,1,-1,2)
-
-        # # query = query.mean(2)
-        # # d_q = query.size(-1)
-        # # key = key.mean(2)
-        # # query = nn.AdaptiveAvgPool3d((4,512,1,5))(query).squeeze(3)
-        # # key = nn.AdaptiveAvgPool3d((4,512,1,5))(key).squeeze(3)
-        # # print("quey_key",query.shape,key.shape)
-
-        # # query = F.avg_pool3d(query, kernel_size=2, stride=2, padding=0)
-        # # key = F.max_pool3d(key, kernel_size=2, stride=2, padding=0)
-        # # query = (nn.AdaptiveAvgPool3d((512,1,5))(query)+nn.AdaptiveMaxPool3d((512,1,5))(query)).squeeze(2)
-        # # key = (nn.AdaptiveAvgPool3d((512,1,5))(key)+nn.AdaptiveMaxPool3d((512,1,5))(key)).squeeze(2)
-        # # print("quey_key",query.shape,key.shape)
-        # value = value.view(batch_size, height*width*channels, -1)
-        # # pred_mask = torch.ones(batch_size, height*width*channels, depth).cuda()
-        # # Compute attention scores
-        # print("qqq",queries.shape,keys.shape,values.shape)
-        # print("queryyyy",query.shape,key.shape)
-        attention = torch.matmul(queries.permute(0, 2, 1), keys)
-        attention /= self.num_heads  # Scale by the number of heads
-        attention = self.softmax(attention)
-        attention = self.dropout(attention)
-
-        # Apply attention to values
-        out = torch.matmul(attention, values.permute(0, 2, 1))
-        out = out.view(batch_size, channels*height*width, depth)
-        # atten_mask = torch.matmul(attention, pred_mask.permute(0, 2, 1))
-        # atten_mask = atten_mask.view(batch_size, channels,  height, width,depth)
-        # print("atten_mask",atten_mask.shape)
-        # out = out.view(batch_size, height, width,depth)
-        temp = out
-        # Residual connection and scaling
-        out = self.gamma * out + x
-        # print("outtt",out.shape,attention.shape)
-
-        # out = out.view(batch_size, depth* height* width,channels)
-
-        # out = out.view(batch_size, height* width,depth,channels)
-        # out=out.mean(1)
-        # print("HII",out.shape,attention.shape)
-        
-        return out,attention#temp.mean(1)#temp.mean(1)#attention
 
 
 
 
 
-# class CrossAttention(nn.Module):
-#     def __init__(self, in_channels,mode,sents):
-#         super(CrossAttention, self).__init__()
-
-#         # Define the key, query, and value linear transformations
-#         in_channels = 256
-#         self.key_img= nn.Conv3d(in_channels, in_channels, kernel_size=1).cuda()
-#         self.query_img = nn.Conv3d(in_channels, in_channels, kernel_size=1).cuda()
-#         self.value_img = nn.Conv3d(in_channels, in_channels, kernel_size=1).cuda()
-
-
-#         self.key_txt=  nn.Conv1d(in_channels, in_channels, kernel_size=1).cuda()
-#         self.query_txt = nn.Conv1d(in_channels, in_channels, kernel_size=1).cuda()
-#         self.value_txt =  nn.Conv1d(in_channels, in_channels, kernel_size=1).cuda()
-
-
-#         # self.gamma = nn.Parameter(torch.randn(1)).cuda()  #torch.zeros(1)
-
-#         # Attention softmax
-#         # self.softmax = nn.Softmax(dim=-1)
-#         self.dropout = nn.Dropout(p=0.25)
-#         self.mode = mode
-#         self.sents = sents
-#         self.dropout = nn.Dropout(p=0.5)
-#     def forward(self, img_embed, txt_embed):
-#         # Compute key, query, and value tensors
-#         # print("x_aten",x.shape)
-#         # print("outtttttttttttttttt",txt_embed)
-#         sents = self.sents
-#         # self.mask_pad = torch.from_numpy((np.array(sents)[:, 1:] == "<pad>") |
-#         #                      (np.array(sents)[:, 1:] == '<s>') |
-#         #                      (np.array(sents)[:, 1:] == '</s>') |
-#         #                      (np.array(sents)[:, 1:] == '<mask>') |
-#         #                      (np.array(sents)[:, 1:] == 'unk') |
-#         #                      (np.array(sents)[:, 1:] == '') |
-#         #                      (np.array(sents)[:, 1:] == 'Ċ')).type(torch.bool)
-
-# # Create a mask to filter tensor1
-#         # mask = ~self.mask_pad.unsqueeze(-1)  # Expand mask to match tensor1's shape
-
-# # Filter tensor1 based on the mask
-        
-#         # txt_embed = text_embed[mask]
-        
-#         self.mask_pad = torch.from_numpy((np.array(sents)[:, 1:] == "<pad>")|(np.array(sents)[:, 1:] =='<s>')|(np.array(sents)[:, 1:] =='</s>')|(np.array(sents)[:, 1:] =='<mask>')|(np.array(sents)[:, 1:] =='unk')|(np.array(sents)[:, 1:] =='')|(np.array(sents)[:, 1:] =='Ċ')).type_as(img_embed).bool()
-#         # self.text_masks = torch.tensor([token in self.mask_pad for token in text_tokens], dtype=torch.bool)
-#         # print("mask_pad",self.mask_pad)
-#         # print("crossssssssss3",img_embed.shape, txt_embed.shape)
-#         # print("txt_embed",txt_embed.shape)
-#         if self.mode == "img_txt":
-#             txt_embed = txt_embed.permute(0,-1,1)
-#             # value = value.permute(0,-1,1)
-#             key = self.key_txt(txt_embed)
-#             # key = self.dropout(key)
-#             query = self.query_img(img_embed)
-#             # query = self.dropout(query)
-#             value = self.value_txt(txt_embed)
-#             # value = self.dropout(value)
-
-#             # Reshape keys, queries, and values
-#             # keys = keys.view(keys.size(0), keys.size(-1) * keys.size(-2) * keys.size(-3),-1)
-#             # queries = queries.view(queries.size(0), queries.size(-1) * queries.size(-2) * queries.size(-3),-1)
-#             # values = values.view(values.size(0), values.size(-1) * values.size(-2) * values.size(-3),-1)
-
-
-#             batch_size, channels,  height, width ,depth= img_embed.size()
-#             batch_size, text_len, embed_dim = txt_embed.size()
-            
-#             # query = query.permute(0,1,-1,2,3)
-           
-#             # value = value.view(batch_size, channels*depth, -1)
-#     # ### this part
-#             query = query.view(batch_size, channels, -1)#.mean(2)
-#             # key = key.view(batch_size, channels*depth, -1)
-#             # value = value.view(batch_size, depth*channels, -1)
-#             attention = torch.bmm(query.permute(0, 2, 1), key)#/np.sqrt(d_q)  #keys.transpose(1, 2)
-#             # attention[self.mask_pad.unsqueeze(1).expand(-1, attention.size(1),-1)] = float('-inf')
-#             attention = attention.masked_fill(self.mask_pad.unsqueeze(1), -1e12)#float('-inf'))
-#             # print("crossssssss4",attention.shape)
-#             attention = torch.softmax(attention,dim = -1)
-            
-            
-           
-#             out = torch.bmm(value, attention.permute(0, 2, 1))
-#             # attention = torch.bmm(query.permute(0, 2, 1), key)#/np.sqrt(d_q)  #keys.transpose(1, 2)
-#             # # attention = nn.ReLU()(attention)
-#             # attention = self.softmax(attention)
-#             # print("outtttttttttttttttt",query)
-            
-#             # # Apply attention to values
-#             # # print("shapes",values.shape,attention.shape)
-#             # # print("value",value.shape)
-#             # # print("value",value.shape,attention.shape)
-#             # out = torch.matmul(attention, value.permute(0, 2, 1))
-#             # print("crossssssssssssssssssss", out.shape)
-#             out = out.view(batch_size, channels,  height, width,depth)
-
-#             # atten_mask = mask_pred.view(batch_size, depth*channels, height*width)
-#             # final_mask = torch.matmul(attention, atten_mask.permute(0, 2, 1))
-#             # final_mask = final_mask.view(batch_size, channels,  height, width,depth)
-#             # final_mask = out - value.view(batch_size, channels,  height, width,depth)
-#             # print("finalllll", final_mask.shape)
-#             # out = out.view(batch_size, height, width,depth)
-#             temp = out
-#             # Residual connection and scaling
-#             # print("out111",torch.unique(self.gamma))
 
 
 
-#             #####################333
-#             # out = self.gamma * out + img_embed
-#             ########################3
-
-
-#             # print("outtt",out.shape,attention.shape)
-#             # removed
-#             # out = out.view(batch_size, depth* height* width,channels)
-#             # print("att",out, attention, query)
-#             return out,attention, query
-#         elif self.mode == "txt_img":
-#             txt_embed = txt_embed.permute(0,-1,1)
-#             key = self.key_img(img_embed)
-#             # key = self.dropout(key)
-#             query = self.query_txt(txt_embed)
-#             # query = self.dropout(query)
-#             value = self.value_img(img_embed)
-#             # value = self.dropout(value)
-
-#             batch_size, channels,  height, width ,depth= img_embed.size()
-            
-#             # key = key.permute(0,1,-1,2,3)
-#             # value = value.permute(0,1,-1,2,3)
-#             # query = query.permute(0,-1,1)
-#             value = value.view(batch_size, channels, -1)
-  
-#             # query = query.view(batch_size, channels*depth, -1)
-#             key = key.view(batch_size, channels, -1)
-#             attention = torch.bmm(query.permute(0, 2, 1), key)#/np.sqrt(d_q)  #keys.transpose(1, 2)
-#             # attention = nn.ReLU()(attention)
-#             # print("heyyy",attention.shape)
-#             # print("maskkkkkkksksk",self.mask_pad.shape)
-#             # print("!!!11", attention.shape,self.mask_pad.shape)
-#             # .unsqueeze(1).expand(-1, -1, attention.size(-1))
-#             # print("attention",attention)
-#             # attention[self.mask_pad.unsqueeze(-1).expand(-1, -1, attention.size(-1))] = float('-inf')
-#             attention = attention.masked_fill(self.mask_pad.unsqueeze(2),-1e12)#, float('-inf'))
-#             attention = torch.softmax(attention,dim=-1)
-            
-#             # print("atttttttat",channels)
-#             out = torch.bmm(value, attention.permute(0, 2, 1))
-#             # print("outttttttt",out)
-#             # attention = torch.matmul(query.permute(0, 2, 1), key)#/np.sqrt(d_q)  #keys.transpose(1, 2)
-#             # # attention = nn.ReLU()(attention)
-#             # attention = self.softmax(attention)
-
-
-            
-#             # out = torch.matmul(attention, value.permute(0, 2, 1))
-#             # print("crosssss2",out.shape)
-#             out = out.view(batch_size, channels,  1158)
-
-#             temp = out
-#             # Residual connection and scaling
-#             # print("out2222",torch.unique(self.gamma))
-
-
-#             # out = self.gamma * out + txt_embed#query
-
-
-#             # print("att",out.permute(0,-1,1), attention, query.permute(0,-1,1))
-#             return out.permute(0,-1,1), attention, query.permute(0,-1,1)
-        
 
 
 
@@ -4445,7 +2492,7 @@ class CrossAttention(nn.Module):
             return out.permute(0,-1,1), attention, query.permute(0,-1,1)
 
 
-class CrossAttention2(nn.Module):
+class CrossAttention2(nn.Module): 
     def __init__(self, in_channels,mode):#,sents):
         super(CrossAttention2, self).__init__()
 
