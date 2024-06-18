@@ -41,84 +41,15 @@ import mpl_toolkits.axisartist.floating_axes as floating_axes
 
 # # close the file
 # file.close()
-def show_attr(attr_map):
-    attr_map = attr_map[0,:,:,:,70]
-    u,a = viz.visualize_image_attr(
-        attr_map.cpu().permute(1, 2,0).numpy(),  # adjust shape to height, width, channels 
-        method='heat_map',
-        sign='all',
-        show_colorbar=True)
-    u.savefig('foo.png') 
-    # viz._repr_html_()
-
-    # # # components.v1.html(raw_html)
-    # with open("output_mai.html", "w") as file:
-    #     file.write(a.data)
-
-def center_of_mass(image):
-    """
-    Calculate the center of mass for a single image.
-    """
-    # Create coordinate grids
-    grid_x, grid_y = torch.meshgrid(torch.arange(image.size(1)), torch.arange(image.size(2)))
-
-    # Calculate mass
-    mass = image.sum()
-
-    # Calculate center of mass
-    com_x = (grid_x.cuda() * image).sum() / mass
-    com_y = (grid_y.cuda() * image).sum() / mass
-
-    return com_x, com_y
 
 
-def batch_center_of_mass(images):
-    """
-    Calculate the center of mass for a batch of images.
-    """
-    
-    batch_com_x, batch_com_y = [], []
-    for image in images:
-        # Calculate center of mass for each image
-        com_x, com_y = center_of_mass(image)
-        batch_com_x.append(com_x)
-        batch_com_y.append(com_y)
-        
-        return batch_com_x,batch_com_y
-    
-
-def _relabel(input):
-    _, unique_labels = np.unique(input.cpu(), return_inverse=True)
-    return unique_labels.reshape(input.shape)
-
-def _iou_matrix(gt, seg):
-    # relabel gt and seg for smaller memory footprint of contingency table
-    gt = _relabel(gt)
-    seg = _relabel(seg)
-
-    # get number of overlapping pixels between GT and SEG
-    n_inter = contingency_table(gt, seg).A
-
-    # number of pixels for GT instances
-    n_gt = n_inter.sum(axis=1, keepdims=True)
-    # number of pixels for SEG instances
-    n_seg = n_inter.sum(axis=0, keepdims=True)
-
-    # number of pixels in the union between GT and SEG instances
-    n_union = n_gt + n_seg - n_inter
-
-    iou_matrix = n_inter / n_union
-    # make sure that the values are within [0,1] range
-    assert 0 <= np.min(iou_matrix) <= np.max(iou_matrix) <= 1
-
-    return iou_matrix
-def soft_dice_coefficient(y_true, y_pred, epsilon=1e-6):
+def soft_dice_coefficient(y_true, y_pred, smooth):  # extracted from: https://github.com/myidispg/kaggle-cloud/blob/20f20a9be25d872e5c5d5ec62b28ad656d516270/utils/helpers.py#L61
     # print("y_pred",y_true.shape,y_pred.shape)
     y_true_flat = y_true.reshape(-1)
     y_pred_flat = y_pred.reshape(-1)
     intersection = torch.sum(y_true_flat * y_pred_flat)
     union = torch.sum(y_true_flat) + torch.sum(y_pred_flat)
-    dice_coeff = (2. * intersection + epsilon) / (union + epsilon)
+    dice_coeff = (2. * intersection + smooth) / (union + smooth)
     return dice_coeff
 
 def dice_coefficient(y_pred, y_true, smooth=1.0):
@@ -130,13 +61,7 @@ def dice_coefficient(y_pred, y_true, smooth=1.0):
     dice = (2.0 * intersection + smooth) / union
     return dice
 
-def iou(predicted, target, smooth=1.0):
-    # predicted = predicted.view(-1)
-    # target = target.view(-1)
-    intersection = torch.sum(predicted * target)
-    union = torch.sum(predicted) + torch.sum(target) - intersection + smooth
-    iou_score = (intersection + smooth) / union
-    return iou_score
+
 
 def normalize_mask(mask):
     min_val = np.min(mask)
@@ -144,30 +69,8 @@ def normalize_mask(mask):
     normalized_mask = (mask - min_val) / (max_val - min_val)
     return normalized_mask
 
-def calculate_3d_iou(box1, box2):
-    # box1 and box2 should be in the format [x1, y1, z1, x2, y2, z2]
 
-    # Calculate the intersection volume
-    x1_intersection = max(box1[0], box2[0])
-    y1_intersection = max(box1[1], box2[1])
-    z1_intersection = max(box1[2], box2[2])
-    x2_intersection = min(box1[3], box2[3])
-    y2_intersection = min(box1[4], box2[4])
-    z2_intersection = min(box1[5], box2[5])
 
-    intersection_volume = max(0, x2_intersection - x1_intersection) * max(0, y2_intersection - y1_intersection) * max(0, z2_intersection - z1_intersection)
-
-    # Calculate the volume of each bounding box
-    box1_volume = (box1[3] - box1[0]) * (box1[4] - box1[1]) * (box1[5] - box1[2])
-    box2_volume = (box2[3] - box2[0]) * (box2[4] - box2[1]) * (box2[5] - box2[2])
-
-    # Calculate the Union volume
-    union_volume = box1_volume + box2_volume - intersection_volume
-
-    # Calculate IoU
-    iou = intersection_volume / union_volume
-
-    return iou
 
 
 # data=process_excel(df_text_excel)
@@ -1160,33 +1063,11 @@ with torch.no_grad():
             dice = dice_coefficient( binarized_heatmap_slice , masks_slice)
             
 
-            # x_mask,y_mask = batch_center_of_mass(masks_slice)  
-            # x_heat,y_heat = batch_center_of_mass(heatmap_slice)     
-            
-            
-            # x_mask_tensor = torch.tensor(x_mask)
-            # y_mask_tensor = torch.tensor(y_mask)
-            # x_heat_tensor = torch.tensor(x_heat)
-            # y_heat_tensor = torch.tensor(y_heat)
-
-            # # Compute squared differences between x coordinates
-            # squared_diffs_x = (x_mask_tensor - x_heat_tensor) ** 2
-
-            # Compute squared differences between y coordinates
-            # squared_diffs_y = (y_mask_tensor - y_heat_tensor) ** 2
-
-            # # Sum squared differences along the last dimension (assuming each pair of points is along the last dimension)
-            # sum_squared_diffs = squared_diffs_x + squared_diffs_y
-
-            # # Compute square root to get Euclidean distance
-            # euclidean_dist = torch.sqrt(sum_squared_diffs)
-
-
-            # print("eucl",euclidean_dist)
+          
             print("soft_dice",soft_dice)
             print("dice",dice)
-        #     # break
-            del attrs#attention_weights
+       
+            del attrs
             batch_size = heatmap.size(0)
             total_batch_size += batch_size
             # threshold=150
@@ -1262,150 +1143,3 @@ with torch.no_grad():
 
 
 
-#### lime
-
-
-# from captum.attr import visualization as viz
-# from captum.attr import Lime, LimeBase
-# from captum._utils.models.linear_model import SkLearnLinearRegression, SkLearnLasso
-# from captum.attr._core.lime import get_exp_kernel_similarity_function
-
-
-# n_interpret_features = 2
-# def iter_combinations(*args, **kwargs):
-#     for i in range(2 ** n_interpret_features):
-#         yield torch.tensor([int(d) for d in bin(i)[2:].zfill(n_interpret_features)]).unsqueeze(0)
-# exp_eucl_distance = get_exp_kernel_similarity_function('euclidean', kernel_width=1000)
-# lr_lime = Lime(
-#     model, 
-#     interpretable_model=SkLearnLasso(alpha=0.08),  # build-in wrapped sklearn Linear Regression
-#     similarity_func=exp_eucl_distance,
-#     perturb_func=iter_combinations
-# )
-# # label_idx = output_probs.argmax().unsqueeze(0)
-# pred_idx = binary_preds
-# attrs = lr_lime.attribute(
-#     input_data.unsqueeze(0),
-#     target=pred_idx,
-#     feature_mask=mask.unsqueeze(0),
-#     n_samples=40,
-#     perturbations_per_eval=16,
-#     show_progress=True
-# ).squeeze(0)
-
-# print('Attribution range:', attrs.min().item(), 'to', attrs.max().item())
-# print("shapeeeee", attrs.shape)
-# def show_attr(attr_map):
-#     viz.visualize_image_attr(
-#         attr_map.permute(1, 2, 3, 0).numpy(),  # adjust shape to height, width, channels 
-#         method='heat_map',
-#         sign='all',
-#         show_colorbar=True
-#     )
-
-
-
-
-# ###### 
-
-# ## TCAV
-
-# from captum.concept import TCAV
-# from captum.concept import Concept
-
-# from captum.concept._utils.data_iterator import dataset_to_dataloader, CustomIterableDataset
-# from captum.concept._utils.common import concepts_to_str
-
-
-# # gen_data = pd.read_excel("/hpf/largeprojects/fkhalvati/Sara/lgg/Nomogram_study_LGG_data_Nov.27.xlsx",engine='openpyxl')
-# #         # # df2 = pd.read_excel("/hpf/largeprojects/fkhalvati/Sara/lgg/Stanford_new_data_09_21.xlsx",engine='openpyxl'))
-# #         # tumor_location = gen_data["Location_1"][gen_data["code"]==image_id].values
-
-
-
-# for i in range(batch_size):
-#     selected_slices[i, 0, :, :] = batch_of_images[i, 0, :, :, largest_cross_section_indices[i]]
-# selected_slices = batch_of_images[np.arange(batch_size), :, :, :, largest_cross_section_indices]
-
-
-# def get_tensor_from_filename(filename):
-   
-#     img = np.load(filename)#(os.path.join(self.image_folder, str(image_id), "FLAIR", "preprocessed_segmentation.npy"))
-#     return torch.Tensor(img)
-
-
-
-# image_path = 
-# def assemble_concept(name, id, concept_path=image_path):
-#     # concept_path = os.path.join(concepts_path, name) + "/"
-    
-#     # Assuming your images are stored in subdirectories inside the concept_path
-#     df_loc = df[df["Location_1"]==name]
-#     id_list_loc = list(df_loc["image_id"])
-#     subdirectories = [d for d in os.listdir(concept_path) if (os.path.isdir(os.path.join(concept_path, d)) and d in id_list_loc)]
-    
-#     image_paths = []
-#     for subdir in subdirectories:
-#         subdir_path = os.path.join(concept_path, subdir,"FLAIR")
-#         images_in_subdir = [os.path.join(subdir_path,f) for f in os.listdir(subdir_path) if f=="preprocessed_segmentation.npy"]
-#         image_paths.extend(images_in_subdir)
-    
-#     dataset = CustomIterableDataset(get_tensor_from_filename, image_paths)
-#     concept_iter = dataset_to_dataloader(dataset)
-
-#     return Concept(id=id, name=name, data_iter=concept_iter)
-
-
-# # concepts_path = "data/tcav/image/concepts/"
-
-# supra_concept = assemble_concept("1", 0)
-# infra_concept = assemble_concept("2", 1)
-# trans_concept = assemble_concept("3", 2)
-
-
-# model.eval()
-# layers=['layer4']
-# mytcav = TCAV(model=model,
-#               layers=layers,
-#               layer_attr_method = LayerIntegratedGradients(
-#                 model, None, multiply_by_inputs=False))
-
-# experimental_set_rand = [[supra_concept, infra_concept,trans_concept]]
-# tcav_scores_w_random = mytcav.interpret(inputs=input_data.cuda(),
-#                                         experimental_sets=experimental_set_rand,
-#                                         # target=zebra_ind,
-#                                         n_steps=5,
-#                                        )
-
-# def format_float(f):
-#     return float('{:.3f}'.format(f) if abs(f) >= 0.0005 else '{:.3e}'.format(f))
-
-# def plot_tcav_scores(experimental_sets, tcav_scores):
-#     fig, ax = plt.subplots(1, len(experimental_sets), figsize = (25, 7))
-
-#     barWidth = 1 / (len(experimental_sets[0]) + 1)
-
-#     for idx_es, concepts in enumerate(experimental_sets):
-
-#         concepts = experimental_sets[idx_es]
-#         concepts_key = concepts_to_str(concepts)
-
-#         pos = [np.arange(len(layers))]
-#         for i in range(1, len(concepts)):
-#             pos.append([(x + barWidth) for x in pos[i-1]])
-#         _ax = (ax[idx_es] if len(experimental_sets) > 1 else ax)
-#         for i in range(len(concepts)):
-#             val = [format_float(scores['sign_count'][i]) for layer, scores in tcav_scores[concepts_key].items()]
-#             _ax.bar(pos[i], val, width=barWidth, edgecolor='white', label=concepts[i].name)
-
-#         # Add xticks on the middle of the group bars
-#         _ax.set_xlabel('Set {}'.format(str(idx_es)), fontweight='bold', fontsize=16)
-#         _ax.set_xticks([r + 0.3 * barWidth for r in range(len(layers))])
-#         _ax.set_xticklabels(layers, fontsize=16)
-
-#         # Create legend & Show graphic
-#         _ax.legend(fontsize=16)
-
-#     plt.show()
-
-# plot_tcav_scores(experimental_set_rand, tcav_scores_w_random)    
