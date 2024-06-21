@@ -15,7 +15,6 @@ from torch import optim
 from torch.utils.data import DataLoader,SubsetRandomSampler
 from torch.utils.tensorboard import SummaryWriter
 from torchvision import transforms
-# from imgaug import augmenters as iaa
 from datetime import datetime
 from captum.attr import LayerGradCam,GuidedGradCam
 from captum.attr._utils.attribution import GradientAttribution, LayerAttribution
@@ -25,22 +24,9 @@ from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 from torch.autograd import Variable
 from losses import ContrastiveLoss_cosine,ContrastiveLoss_euclidean,ContrastiveLoss_cosine2
 from losses import local_contrastive_loss2,cosine_similarity,cosine_distance,cosine_similarity2,local_contrastive_loss3,local_loss
-#attention maps
-# from medcam import medcam
-#from monai.visualize import GradCAM
-#import pytorch_lightning
-#from pytorch_lightning import GuidedGradCam
-#############from models.classifier import UnetClassifier, EditableUnet
-#from utils.gradcam_utils import GradCam, visualize_gcam
-#########from utils.dataset import split_dataset, EyegazeDataset, collate_fn
-#from utils.utils import cyclical_lr
-#from utils.dice_loss import GeneralizedDiceLoss
-#from utils.visualization import plot_roc_curve
 from transformers import AdamW
 from sklearn.metrics import roc_auc_score, roc_curve
-# from lgg_utils import get_model_name,cyclical_lr
 from fused_dataset import BertDataset,split_dataset_cv,process_excel#,load_data_for_patient,process_excel
-# from fused_model import generate_model
 import pickle
 from sklearn.manifold import TSNE
 plt.rcParams['figure.figsize'] = [25, 10]
@@ -51,26 +37,22 @@ logger = logging.getLogger('lgg_unet')
 logging.getLogger('matplotlib.font_manager').disabled = True
 pil_logger = logging.getLogger('PIL').setLevel(logging.INFO)
 
-# import torch.distributed as dist
-# dist.init_process_group(backend='nccl')
 def make_parser():
-    parser = argparse.ArgumentParser(description='PyTorch SickKids Brain MRI')
+    
 
-    # Data
-    parser.add_argument('--data_path', type=str, default="/hpf/largeprojects/fkhalvati/Sara/lgg/Nomogram_study_LGG_data_Nov.27.xlsx", help='Data path')
-    parser.add_argument('--image_path', type=str, default="/hpf/largeprojects/fkhalvati/Projects/SickKids_Brain_Preprocessing/preprocessed_all_seq_kk_july_2022", help='image_path')
-    parser.add_argument('--output_dir', type=str, default='/hpf/largeprojects/fkhalvati/Sara/pLGG_results/image_text', help='Output directory')
+    
+    parser.add_argument('--data_path', type=str, default="sth.xlsx")
+    parser.add_argument('--image_path', type=str, default="sth")
+    parser.add_argument('--output_dir', type=str, default='sth')
 
-    # Training
-    parser.add_argument('--batch_size', type=int, default=4, help='batch size') #4
-    parser.add_argument('--num_epochs', type=int, default=800, help='number of epochs')
+    
+    parser.add_argument('--batch_size', type=int, default=4)
+    parser.add_argument('--num_epochs', type=int, default=800)
     parser.add_argument('--lr', type=float, default=1e-4, help='initial learning rate')
     
     parser.add_argument('--step_size', type=int, default=5, help='scheduler step size')
 
-    
-    parser.add_argument('--gpus', type=str, default='0', help='Which gpus to use, -1 for CPU')
-    parser.add_argument('--rseed', type=int, default=42, help='Seed for reproducibility')
+    parser.add_argument('--rseed', type=int, default=42, help='random seed')
     parser.add_argument('--margin', type=float, default=0.25)
     parser.add_argument('--similarity_measure', type=str, default='cosine')
     parser.add_argument('--weight_decay', type=float, default=0.001)
@@ -132,489 +114,6 @@ class DynamicWeightedLoss(nn.Module):
         total_loss = torch.sum(weighted_losses)
         return total_loss , self.weights
 
-
-
-def train_global_model(args, data_ds,test_dl, output_model_path, tuning=False):
-    
-    global_step = 0
-    temperature=0.1
-    softmax_temperature= 0.07
-    local_temperature=0.1
-   
-    lambda_1: float =1
-    lambda_2: float =1
-    
-    lambda_3: float = 0.125
-    num_heads = 1
-    emb_dim = 128
-    
- #   optimizer = optim.Adam(model.parameters(), lr=args.lr)
-    # clr = cyclical_lr(step_sz=args.step_size, min_lr=args.lr, max_lr=1, mode='triangular2')
-    batch_size=args.batch_size
-    num_batch_accumulate = args.accumulate/batch_size #128 / batch_size
- 
-    classifier_criterion = nn.BCEWithLogitsLoss()#BCELoss()#.
-    total_train_auc={}
-    total_val_auc={}
-    test_auc=[]
-#    optimizer.zero_grad()
-#    for t in range(n_trial):
-    weight_path="/hpf/largeprojects/fkhalvati/Sara/pretrain/resnet_18_23dataset.pth"
-    best_auc=0
-    for fold, (train_idx,val_idx) in enumerate(splits.split(np.arange(len(data_ds)))):
-    
-        print('Fold {}'.format(fold + 1))
-        train_sampler = SubsetRandomSampler(train_idx)
-        test_sampler = SubsetRandomSampler(val_idx)
-        train_dl = DataLoader(data_ds, batch_size=batch_size, sampler=train_sampler)
-        valid_dl = DataLoader(data_ds, batch_size=batch_size, sampler=test_sampler)
-        train_dl = DataLoader(whole_data, batch_size=batch_size,shuffle=True)
-        print("lenn",len(train_dl))
-        model=image_text_attention_global(emb_dim=128,num_heads=num_heads,mode="global")
-        # opt={}
-        ##################3pretrain
-        # model = generate_model(model_depth=18, inplanes=inplanes, n_classes=1039)
-        model.cnn.conv1 = nn.Conv3d(1, 64, kernel_size=(7, 7, 7), stride=(1, 2, 2), padding=(3, 3, 3), bias=False)
-        model.cnn.fc  = nn.Linear(512, 1)
-        net_dict = model.cnn.state_dict()
-        
-        pretrain = torch.load(weight_path)
-        pretrain['state_dict'] = {k.replace('module.', ''): v for k, v in pretrain['state_dict'].items()}
-        pretrain_dict = {k: v for k, v in pretrain['state_dict'].items() if k in net_dict.keys()}
-         
-        net_dict.update(pretrain_dict)
-        model.cnn.load_state_dict(net_dict)
-        ##############3pretrain
-        # model.load_state_dict(weight_path['state_dict'])  ####mednet
-        # optimizer.load_state_dict(weight_path['optimizer']) ### mednet
-        # for p in parameters:
-        for pname, p in model.cnn.named_parameters():
-            p.requires_grad = False
-        # for pname, p in model.cnn.conv1.named_parameters():
-        #     p.requires_grad = True
-        # for pname, p in model.cnn.layer2.named_parameters():
-        #     p.requires_grad = True
-        for p in model.cnn.layer4.parameters():
-            p.requires_grad = True
-        for p in model.cnn.layer3.parameters():
-            p.requires_grad = True
-        for p in model.cnn.fc.parameters():
-            p.requires_grad = False
-        # model.conv1 = nn.Conv3d(1, 64, kernel_size=(7, 7, 7), stride=(1, 2, 2), padding=(3, 3, 3), bias=False)
-        # patch_local_atten_layer = nn.MultiheadAttention(emb_dim, num_heads, batch_first=True)
-        # word_local_atten_layer = nn.MultiheadAttention(emb_dim, num_heads, batch_first=True)
-        # model.cnn.fc  = nn.Linear(512, 1)#nn.Sequential(nn.Linear(512, 256),nn.Linear(256, 1))#3) #512
-        device=torch.device("cuda:0")
-        # model = torch.nn.DataParallel(model, device_ids=[0, 1]).to(device)#,device_ids = [int(i) for i in "0,1".split(',')])
-        model.to(device)
-        # print("gpu_id",torch.cuda.get_device_name(1),torch.cuda.get_device_name(0))
-        # model.module.to(torch.device('cuda:1'))
-        # patch_local_atten_layer.to(device)
-        # word_local_atten_layer.to(device)
-        
-        # optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-        optimizer = AdamW(model.parameters(), lr=args.lr)
-        # scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
-        scheduler = CosineAnnealingWarmRestarts(optimizer,T_0=400,T_mult=1, eta_min=1e-8, last_epoch=-1)
-            
-        #(optimizer, step_size=10, gamma=0.1)#torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
-        optimizer.zero_grad()
-        ita_list=[]
-        ita_list_val=[]
-        local_list=[]
-        cl_list=[]
-        for epoch in range(args.num_epochs):
-            model.train()
-            # model.cnn.eval()
-            # # model.cnn.conv1.trian()
-            # model.cnn.layer4.train()
-            # model.cnn.layer3.train()
-            train_loss = 0
-            counter = 0
-            num_batches=0
-            num_batches_valid=0
-            val_batches=0
-            val_batch=0
-            train_batches=0
-            epoch_loss = 0
-            training_ture=[]
-            training_estimated=[]
-     #       print(len(train_dl))
-            i2t_corr_tr=0
-            batch_epoch_tr=0
-            i2t_corr_val=0
-            t2i_corr_tr=0
-            t2i_corr_val=0
-            batch_epoch_val=0
-            #******
-            # image_embeddings = []
-            
-            report_embeddings = []
-            image_embeddings=[]
-            label_list=[]
-            pred_list=[]
-            # image_embeddings_1 = torch.Tensor().cuda()
-            # image_embeddings_2= torch.Tensor().cuda()
-            # image_embeddings = torch.Tensor().cuda()
-            # report_embeddings = torch.Tensor().cuda()
-            
-            for num_batches,(images,text, labells,masks) in enumerate(train_dl): 
-                # print("HI")
-                # print("report",len(report_embeddings))
-                device="cuda:0"#torch.device("cuda:0")
-                images= images.to(device)#,labells.to(device)
-                labells= labells.to(device)
-                mask = text['attention_mask'].to(device)
-                input_id = text['input_ids'].squeeze(1).to(device)
-
- 
-    #            loss_classifier = classifier_criterion(y_pred, labels)
-
-    #            epoch_loss += total_loss.item()
-
-                
-                # model.to(device)
-                # optimizer.zero_grad()
-                # pred=model(images)
-                images=images.float()
-                # pred,img_emb_q,report_emb_q,patch_emb_q,word_emb_q,word_attn_q,sents,patch_atten_output,word_atten_output= model(images,input_id, mask)
-                pred,img_emb_q,report_emb_q,patch_emb_q= model(images,input_id, mask)
-                # print("patch_emb_q",patch_emb_q.shape)
-                pred_list.append(pred)
-                label_list.append(labells)
-                # print("params",model.parameters)
-                # del patch_emb_q,word_emb_q,word_attn_q,sents,patch_atten_output,word_atten_output
-                # pred=pred.detach()
-                prob = torch.sigmoid(pred)
-                image_embeddings.append(img_emb_q)
-                # image_embeddings = np.append(image_embeddings, img_emb_q)
-                report_embeddings.append(report_emb_q)
-                
-                # euclidean_distance = torch.nn.functional.pairwise_distance(img_emb_q, report_emb_q, keepdim=True)
-                # # torch.cuda.empty_cache()
-                # # distance_list.append(euclidean_distance)
-                # img_emb_q = img_emb_q.unsqueeze(1)
-                # report_emb_q = report_emb_q.unsqueeze(1)
-                # del pred,prob
-                # if len(report_embeddings)<=4:
-
-                #     image_embeddings_1 = torch.cat((image_embeddings_1, img_emb_q))#, dim=1)
-                # else:
-                #     image_embeddings_2 = torch.cat((image_embeddings_2, img_emb_q))
-                # image_embeddings = torch.cat((image_embeddings, img_emb_q),dim=1)
-
-                # # print("image",len(image_embeddings_1),len(image_embeddings_2))
-                # report_embeddings = torch.cat((report_embeddings, report_emb_q), dim=1)
-                # print("lennn",len(report_embeddings),len(image_embeddings))
-                # print("embb",report_emb_q.shape)
-                if ((num_batches + 1) % num_batch_accumulate == 0) or (num_batches + 1 == len(train_dl)):
-                    #  optimizer.zero_grad()
-                    # print("Hi")
-                    # distance_list = torch.cat(distance_list, dim=0)
-                    # print("num_batches",num_batches)
-                    
-                    report_embeddings = torch.cat(report_embeddings, dim=0)
-                    # print("reporttttt",report_embeddings.shape)
-                    image_embeddings=torch.cat(image_embeddings, dim=0)   
-                    pred_batch=torch.cat(pred_list, dim=0) 
-                    label_batch=torch.cat(label_list, dim=0) 
-                    # loss_classification=classifier_criterion(pred_batch,label_batch.unsqueeze(1).float())   
-                    # print("imageee",image_embeddings.shape)                  
-                    bz = len(report_embeddings)
-                    
-                    # distance_list=torch.tensor(distance_list, requires_grad=True)
-                    # distance_list=distance_list.cuda()
-                    labs = torch.arange(bz).type_as(report_emb_q).long() #global
-                    labels = torch.eye(bz).type_as(report_emb_q)[labs] #global
-                    # labels = torch.arange(bz).type_as(report_emb_q).long()
-                    # labels = Variable(torch.LongTensor(range(bz))).cuda()
-                    # print("labellllls",labels.shape)
-                    if args.similarity_measure=="euclidian":
-                        # print("ok")
-                        loss_fn = ContrastiveLoss_euclidean(margin=args.margin)
-                    else:
-                        loss_fn =ContrastiveLoss_cosine2(margin=args.margin)
-                    loss0,i_t_scores,t_i_scores = loss_fn(image_embeddings,report_embeddings,labels)
-                    i_t_scores=cosine_similarity(image_embeddings,report_embeddings)
-                    i2t_acc1_tr,i2t_corr_tr_batch,i2t_batch_tr = precision_at_k(i_t_scores)#, labels, top_k=(1,))
-                    print("pr",i2t_acc1_tr)
-                    # t2i_acc1_tr,t2i_corr_tr_batch,t2i_batch_tr  = precision_at_k(t_i_scores, labels, top_k=(1,))
-                    # print("test prec",i2t_acc1_tr,t2i_acc1_tr)
-                    i2t_corr_tr+=i2t_corr_tr_batch
-                    # t2i_corr_tr+=t2i_corr_tr_batch
-                    
-                    batch_epoch_tr+=i2t_batch_tr
-                    # print("training precision",(i2t_acc1_tr[0] + t2i_acc1_tr[0]) / 2.)
-                    loss0.backward()
-
-
-                    optimizer.step() 
-                    # for element in distance_list:
-                    #     # print(element.requires_grad)
-                    #     print("element",element.grad)
-                    optimizer.zero_grad() 
-                    train_loss+=loss0.detach().item()#*batch_size ### Sajith: added detach 
-                    train_batches+=1
-
-                    # distance_list = []
-                    image_embeddings = []
-                    report_embeddings = []
-                    pred_list=[]
-                    label_list=[]
-                    # image_embeddings_1 = torch.Tensor().cuda()
-                    # image_embeddings = torch.Tensor().cuda()
-
-                    # report_embeddings = torch.Tensor().cuda()
-                for i in range(len(labells.tolist())):
-                    # print("ll",labells)
-                    
-                    training_ture.append(labells.tolist()[i])#[0])
-                    training_estimated.append(prob.tolist()[i])#[0]) #prob
-               #     model_grad = medcam.inject(model, output_dir=gradcam_dir, save_maps=True)
-
-    #            corr = (pred>0.0).squeeze().long() != labells
-                # train_loss+=loss.detach().item()*batch_size ### Sajith: added detach 
-                #?
-                # train_batches+=1
-                counter += 1
-
-            # Calculate average over epoch
-            # total_train_err[epoch] = float(train_err) / total_epoch
-    ##        total_train_loss[epoch] = float(train_loss) / (n + 1)
-            # scheduler.step()
-            train_loss = train_loss/(train_batches)#*batch_size)  
-            print("loss_ita",train_loss)
-            ita_list.append(train_loss)
-            if epoch%10==0:
-                torch.save(model.state_dict(), os.path.join(args.output_dir,f"cls_global_only__fold__{fold}__epoch__{epoch}__margin{args.margin}_similarity{args.similarity_measure}"))
-            del loss0 ### Sajith 
-            
-            i2t_precision_tr=i2t_corr_tr/batch_epoch_tr
-            # t2i_precision_tr=t2i_corr_tr/batch_epoch_tr
-            print("training precision", i2t_precision_tr)##+t2i_precision_tr)/2)
-            model.eval()
-            with torch.set_grad_enabled(False):
-
-                val_loss = 0.0
-                val_b=0
-                total_epoch = 0
-                validation_true = []
-                validation_estimated = []
-                n = 0
-                # valid_dl.dataset.dataset.test_or_val = True
-                image_embeddings_val = []
-                report_embeddings_val = []
-                for num_batches_valid,(images, text,labells,masks) in enumerate(valid_dl):
-                    
- #               for i, batch in enumerate(valid_dl):
-     #               model = medcam.inject(model, output_dir=gradcam_dir, save_maps=True)
-      #              model.to(device)
-            #_ = model(batch[0][0])
-    #                if torch.cuda.is_available():
-                    images, labells = images.to(device), labells.to(device)
-                    mask = text['attention_mask'].to(device)
-                    input_id = text['input_ids'].squeeze(1).to(device)
-                    
-                    # pred,img_emb_q,report_emb_q,patch_emb_q,word_feat_q,word_attn_q,sents,patch_atten_output,word_atten_output = model(images.float(),input_id, mask)
-                    pred,img_emb_q,report_emb_q,patch_emb_q = model(images.float(),input_id, mask)
-
-                    image_embeddings_val.append(img_emb_q)
-                    report_embeddings_val.append(report_emb_q)
-                    # bz = img_emb_q.size(0)
-                   
-                    prob = torch.sigmoid(pred)
-
-                    # labs = torch.arange(bz).type_as(report_emb_q).long()
-                    # labels = torch.eye(bz).type_as(report_emb_q)[labs]
-                    # loss_fn = ContrastiveLoss_euclidean(margin=0.1)
-                    # loss0 = loss_fn(img_emb_q,report_emb_q, labels)
-                    # valid_loss = loss0
-                    
-                    
-                    for i in range(len(labells.tolist())):
-                        validation_true.append(labells.tolist()[i])#[0])
-                        validation_estimated.append(prob.tolist()[i])#[0])
-
-                    if ((num_batches_valid + 1) % num_batch_accumulate == 0) or (num_batches_valid + 1 == len(valid_dl)): 
-                        
-                        # val_batches = 0  
-                        
-                        val_batches+=1
-                        image_embeddings_val = torch.cat(image_embeddings_val, dim=0)
-                        report_embeddings_val = torch.cat(report_embeddings_val, dim=0)
-                        bz = len(image_embeddings_val)
-                   
-                        prob = torch.sigmoid(pred)
-
-                        labs = torch.arange(bz).type_as(report_embeddings_val).long()
-                        labels = torch.eye(bz).type_as(report_embeddings_val)[labs]
-                        # labels = torch.arange(bz).type_as(report_emb_q).long()
-                        # euclidean_distance = torch.nn.functional.pairwise_distance(image_embeddings_val, report_embeddings_val, keepdim=True)
-                        
-                        # loss_fn = ContrastiveLoss_euclidean(margin=args.margin)
-                        if args.similarity_measure=="euclidian":
-                            loss_fn = ContrastiveLoss_euclidean(margin=args.margin)
-                        else:
-                            loss_fn = ContrastiveLoss_cosine2(margin=args.margin)
-                        valid_loss,i_t_scores,t_i_scores = loss_fn(image_embeddings_val,report_embeddings_val,labels)
-                        i_t_scores=cosine_similarity(image_embeddings_val,report_embeddings_val)
-                        # print("why",image_embeddings_val.shape,report_embeddings_val.shape)
-                        i2t_acc1_val,i2t_corr_val_batch,i2t_batch_val = precision_at_k(i_t_scores)#, labels, top_k=(1,))
-                        # t2i_acc1_val,t2i_corr_val_batch,t2i_batch_val = precision_at_k(t_i_scores, labels, top_k=(1,))
-                        i2t_corr_val+=i2t_corr_val_batch
-                        batch_epoch_val+=i2t_batch_val
-                        # t2i_corr_val+=t2i_corr_val_batch
-                        
-                        # print("validation precision",(i2t_acc1_val[0] + t2i_acc1_val[0]) / 2.)
-                        # valid_loss_1 = loss_fn(report_embeddings_val,image_embeddings_val, labels)
-                        # valid_loss = (valid_loss_0 + valid_loss_1)/2
-                        # valid_loss = loss_fn(euclidean_distance, labels)
-                        # valid_loss = loss0
-                        val_loss += valid_loss.detach().item()
-                        image_embeddings_val = []
-                        report_embeddings_val = []
-    #                corr = (pred > 0.0).squeeze().long() != labels
-                    # val_err += int(corr.sum())
-    #                total_epoch += len(labels)
-                    n = n + 1
-                val_loss = val_loss / (val_batches)#* batch_size)
-                print("validation_ita",val_loss)
-                i2t_precision_val=i2t_corr_val/batch_epoch_val
-                # t2i_precision_val=t2i_corr_val/batch_epoch_val
-                print("validation precision", i2t_precision_val)#+t2i_precision_val)/2)
-                ita_list_val.append(val_loss)
-                test_true = []
-                test_estimated = []
-                # for images, labells in test_dl:
-                        
-                    
-                #     images, labells = images.to(device), labells.to(device)
-                #     pred = model(images)
-                #     prob = torch.sigmoid(pred)#F.softmax(pred, dim=1)
-                #     for i in range(len(labells.tolist())):
-                #         test_true.append(labells.tolist()[i][0])
-                #         test_estimated.append(prob.tolist()[i][0])
-
-                # Calculate the AUC for the different models
-    #        print("sssssssssssssssssssssssss",validation_true)#len(validation_true))
-            val_auc = roc_auc_score(validation_true, validation_estimated)#,multi_class='ovr')
-            # test_auc = roc_auc_score(test_true, test_estimated)#,multi_class='ovr')
-            train_auc = roc_auc_score(training_ture, training_estimated)#,multi_class='ovr')
-
-                # total_val_err[epoch] = float(val_err) / total_epoch
-    #            total_val_loss[epoch] = float(val_loss) / (n + 1)
-
-
-        
-
-            total_train_auc[epoch] = train_auc
-            total_val_auc[epoch] = val_auc
-            ##### self-added
-            print("epoch",epoch,":","train_AUC:",train_auc,"val_AUC",val_auc)
-            if epoch >=50 and epoch%10==0:
-                print("ita_train_list",ita_list)
-                print("ita_valid_list",ita_list_val)
-            del valid_loss
-        model.eval()
-        with torch.set_grad_enabled(False):
-
-            # val_loss = 0.0
-            # val_b=0
-            # total_epoch = 0
-            test_true = []
-            test_estimated = []
-            n = 0
-            # test_dl.dataset.dataset.test_or_val = True
-            
-            for images, text,labells,masks in test_dl:
-                
-#               for i, batch in enumerate(valid_dl):
-    #               model = medcam.inject(model, output_dir=gradcam_dir, save_maps=True)
-    #              model.to(device)
-        #_ = model(batch[0][0])
-#                if torch.cuda.is_available():
-                images, labells = images.to(device), labells.to(device)
-                mask = text['attention_mask'].to(device)
-                input_id = text['input_ids'].squeeze(1).to(device)
-        
-                pred,image_emb_q,report_emb_q,patch_emb_q,word_feat_q,word_attn_q,sents,patch_atten_output,word_atten_output = model(images.float(),input_id, mask)#(**texts)#
-
-                # pred = model(images)
-                # def model_wrapper(*x):
-                #     return model(*x)[0]
-                # print(model) 
-                # print("layer",model.layer4[0].conv2)               
-                # layer_gc = LayerGradCam(model, model.layer4[0].conv2) #layer4[0].conv1
-                # # layer_gc.grad_cam.forward_func = model_wrapper
-                # # layer_gc.guided_backprop.forward_func = model_wrapper
-                # attr = layer_gc.attribute(images)
-                # print(model)
-                # print("attr",attr.shape)
-                
-                ##$$$$upsampled_attr = LayerAttribution.interpolate(attr, (240,240,155))
-                # print("attr",upsampled_attr.shape)
-                ####$$$$numpy_heatmap=upsampled_attr .cpu().detach().numpy()
-                # print(numpy_heatmap[0][0].shape)
-                # for saving:
-                # for i in numpy_heatmap:
-                ###$$$$ np.save(os.path.join(args.output_dir,"model_heatmap.npy"),numpy_heatmap[0])#[i][0])
-        
-                
-                prob = torch.sigmoid(pred)#F.softmax(pred, dim=1)
-                # loss = classifier_criterion(pred, labells.unsqueeze(1).float()) 
-                
-                for i in range(len(labells.tolist())):
-                    test_true.append(labells.tolist()[i])#[0])
-                    test_estimated.append(prob.tolist()[i])#[0])
-                
-            test_auc = roc_auc_score(test_true, test_estimated)#,multi_class='ovr')
-            print("test_auc",test_auc)
-        if fold==0:
-            break
-
-    #        train_fpr, train_tpr, _ = roc_curve(training_true, training_estimated)
-    #        val_fpr, val_tpr, _ = roc_curve(validation_true, validation_estimated)
-
-            
-
-    #        logging.info(
-    #            "Epoch {}: Train loss: {}, Train AUC: {} | Val loss: {}, Val AUC: {} ".format(
-    #                epoch + 1,
-    #                total_train_loss[epoch],
-    #                total_train_auc[epoch],
-    #                total_val_loss[epoch],
-    #                total_val_auc[epoch]))
-
-            # model_path = get_model_name(trial=fold, name=net.name, batch_size=batch_size, learning_rate=learning_rate,
-                                        # dropout_rate=0.1, epoch=epoch + 1) #after mednet commented
-
-        # if fold==3:
-        # if 
-                
-
-        # torch.save(model.state_dict(), os.path.join(args.output_dir,f"_cl_attention__fold__{fold}"))
-
-    # np.savetxt(os.path.join(save_folder, "{}_train_err.csv".format(model_path)), total_train_err)
-#    np.savetxt(os.path.join(args.output_dir, "{}_train_loss.csv".format(model_path)), total_train_loss)
-#    np.savetxt(os.path.join(args.output_dir, "{}_train_auc.csv".format(model_path)), total_train_auc)
-    # np.savetxt(os.path.join(save_folder, "{}_val_err.csv".format(model_path)), total_val_err)
-#    np.savetxt(os.path.join(args.output_dir, "{}_val_loss.csv".format(model_path)), total_val_loss)
-#    np.savetxt(os.path.join(args.output_dir, "{}_val_auc.csv".format(model_path)), total_val_auc)
-
-
-
-    logging.info('Finished training.')
-#    logging.info(f'Time elapsed: {round(time.time() - training_start_time, 3)} seconds.')
-
-    # return total_train_err, total_train_loss, total_train_auc, total_val_err, total_val_loss, total_val_auc
-    return 0, total_train_auc, 0, total_val_auc
-
-
-
-    
-
-
-
 def train_global_local_model(args, data_ds,test_dl, output_model_path, tuning=False):
     
     global_step = 0
@@ -640,7 +139,7 @@ def train_global_local_model(args, data_ds,test_dl, output_model_path, tuning=Fa
     test_auc=[]
 #    optimizer.zero_grad()
 #    for t in range(n_trial):
-    weight_path="/hpf/largeprojects/fkhalvati/Sara/pretrain/resnet_18_23dataset.pth"
+    weight_path="sth/pretrain/resnet_18_23dataset.pth"
     best_auc=0
 
     for fold, (train_idx,val_idx) in enumerate(splits.split(np.arange(len(data_ds)))):
@@ -1256,6 +755,342 @@ def train_global_local_model(args, data_ds,test_dl, output_model_path, tuning=Fa
     return 0, total_train_auc, 0, total_val_auc
             
 
+def train_global_model(args, data_ds,test_dl, output_model_path, tuning=False):
+    
+    global_step = 0
+    temperature=0.1
+    softmax_temperature= 0.07
+    local_temperature=0.1
+   
+    lambda_1: float =1
+    lambda_2: float =1
+    
+    lambda_3: float = 0.125
+    num_heads = 1
+    emb_dim = 128
+    
+
+    batch_size=args.batch_size
+    num_batch_accumulate = args.accumulate/batch_size #128 / batch_size
+ 
+    classifier_criterion = nn.BCEWithLogitsLoss()
+    total_train_auc={}
+    total_val_auc={}
+    test_auc=[]
+
+    weight_path="sth/pretrain/resnet_18_23dataset.pth"
+    best_auc=0
+    for fold, (train_idx,val_idx) in enumerate(splits.split(np.arange(len(data_ds)))):
+    
+        print('Fold {}'.format(fold + 1))
+        train_sampler = SubsetRandomSampler(train_idx)
+        test_sampler = SubsetRandomSampler(val_idx)
+        train_dl = DataLoader(data_ds, batch_size=batch_size, sampler=train_sampler)
+        valid_dl = DataLoader(data_ds, batch_size=batch_size, sampler=test_sampler)
+        train_dl = DataLoader(whole_data, batch_size=batch_size,shuffle=True)
+        print("lenn",len(train_dl))
+        model=image_text_attention_global(emb_dim=128,num_heads=num_heads,mode="global")
+        # opt={}
+        ##################3pretrain
+        # model = generate_model(model_depth=18, inplanes=inplanes, n_classes=1039)
+        model.cnn.conv1 = nn.Conv3d(1, 64, kernel_size=(7, 7, 7), stride=(1, 2, 2), padding=(3, 3, 3), bias=False)
+        model.cnn.fc  = nn.Linear(512, 1)
+        net_dict = model.cnn.state_dict()
+        
+        pretrain = torch.load(weight_path)
+        pretrain['state_dict'] = {k.replace('module.', ''): v for k, v in pretrain['state_dict'].items()}
+        pretrain_dict = {k: v for k, v in pretrain['state_dict'].items() if k in net_dict.keys()}
+         
+        net_dict.update(pretrain_dict)
+        model.cnn.load_state_dict(net_dict)
+        ##############3pretrain
+       
+        for pname, p in model.cnn.named_parameters():
+            p.requires_grad = False
+        # for pname, p in model.cnn.conv1.named_parameters():
+        #     p.requires_grad = True
+        # for pname, p in model.cnn.layer2.named_parameters():
+        #     p.requires_grad = True
+        for p in model.cnn.layer4.parameters():
+            p.requires_grad = True
+        for p in model.cnn.layer3.parameters():
+            p.requires_grad = True
+        for p in model.cnn.fc.parameters():
+            p.requires_grad = False
+        
+        optimizer = AdamW(model.parameters(), lr=args.lr)
+       
+        scheduler = CosineAnnealingWarmRestarts(optimizer,T_0=400,T_mult=1, eta_min=1e-8, last_epoch=-1)
+            
+        
+        optimizer.zero_grad()
+        ita_list=[]
+        ita_list_val=[]
+        local_list=[]
+        cl_list=[]
+        for epoch in range(args.num_epochs):
+            model.train()
+            
+            train_loss = 0
+            counter = 0
+            num_batches=0
+            num_batches_valid=0
+            val_batches=0
+            val_batch=0
+            train_batches=0
+            epoch_loss = 0
+            training_ture=[]
+            training_estimated=[]
+     #       print(len(train_dl))
+            i2t_corr_tr=0
+            batch_epoch_tr=0
+            i2t_corr_val=0
+            t2i_corr_tr=0
+            t2i_corr_val=0
+            batch_epoch_val=0
+            
+            
+            report_embeddings = []
+            image_embeddings=[]
+            label_list=[]
+            pred_list=[]
+           
+            for num_batches,(images,text, labells,masks) in enumerate(train_dl): 
+                # print("HI")
+                # print("report",len(report_embeddings))
+                device="cuda:0"#torch.device("cuda:0")
+                images= images.to(device)#,labells.to(device)
+                labells= labells.to(device)
+                mask = text['attention_mask'].to(device)
+                input_id = text['input_ids'].squeeze(1).to(device)
+
+ 
+ 
+                images=images.float()
+                pred,img_emb_q,report_emb_q,patch_emb_q= model(images,input_id, mask)
+                # print("patch_emb_q",patch_emb_q.shape)
+                pred_list.append(pred)
+                label_list.append(labells)
+                # print("params",model.parameters)
+                
+                prob = torch.sigmoid(pred)
+                image_embeddings.append(img_emb_q)
+                report_embeddings.append(report_emb_q)
+                
+                # euclidean_distance = torch.nn.functional.pairwise_distance(img_emb_q, report_emb_q, keepdim=True)
+                
+                if ((num_batches + 1) % num_batch_accumulate == 0) or (num_batches + 1 == len(train_dl)):
+                    
+                    
+                    report_embeddings = torch.cat(report_embeddings, dim=0)
+                    # print("reporttttt",report_embeddings.shape)
+                    image_embeddings=torch.cat(image_embeddings, dim=0)   
+                    pred_batch=torch.cat(pred_list, dim=0) 
+                    label_batch=torch.cat(label_list, dim=0) 
+                    # print("imageee",image_embeddings.shape)                  
+                    bz = len(report_embeddings)
+                    
+                   
+                    labs = torch.arange(bz).type_as(report_emb_q).long() #global
+                    labels = torch.eye(bz).type_as(report_emb_q)[labs] #global
+                    
+                    # print("labellllls",labels.shape)
+                    if args.similarity_measure=="euclidian":
+                        # print("ok")
+                        loss_fn = ContrastiveLoss_euclidean(margin=args.margin)
+                    else:
+                        loss_fn =ContrastiveLoss_cosine2(margin=args.margin)
+                    loss0,i_t_scores,t_i_scores = loss_fn(image_embeddings,report_embeddings,labels)
+                    i_t_scores=cosine_similarity(image_embeddings,report_embeddings)
+                    i2t_acc1_tr,i2t_corr_tr_batch,i2t_batch_tr = precision_at_k(i_t_scores)#, labels, top_k=(1,))
+                    print("pr",i2t_acc1_tr)
+                    
+                    i2t_corr_tr+=i2t_corr_tr_batch
+                    
+                    
+                    batch_epoch_tr+=i2t_batch_tr
+                    # print("training precision",(i2t_acc1_tr[0] + t2i_acc1_tr[0]) / 2.)
+                    loss0.backward()
+
+
+                    optimizer.step() 
+                    
+                    optimizer.zero_grad() 
+                    train_loss+=loss0.detach().item()#*batch_size ### Sajith: added detach 
+                    train_batches+=1
+
+                    # distance_list = []
+                    image_embeddings = []
+                    report_embeddings = []
+                    pred_list=[]
+                    label_list=[]
+                    # image_embeddings_1 = torch.Tensor().cuda()
+                    # image_embeddings = torch.Tensor().cuda()
+
+                    # report_embeddings = torch.Tensor().cuda()
+                for i in range(len(labells.tolist())):
+                    # print("ll",labells)
+                    
+                    training_ture.append(labells.tolist()[i])#[0])
+                    training_estimated.append(prob.tolist()[i])#[0]) #prob
+              
+                counter += 1
+
+            
+            train_loss = train_loss/(train_batches)#*batch_size)  
+            print("loss_ita",train_loss)
+            ita_list.append(train_loss)
+            if epoch%10==0:
+                torch.save(model.state_dict(), os.path.join(args.output_dir,f"cls_global_only__fold__{fold}__epoch__{epoch}__margin{args.margin}_similarity{args.similarity_measure}"))
+            del loss0 ### Sajith 
+            
+            i2t_precision_tr=i2t_corr_tr/batch_epoch_tr
+           
+            print("training precision", i2t_precision_tr)##+t2i_precision_tr)/2)
+            model.eval()
+            with torch.set_grad_enabled(False):
+
+                val_loss = 0.0
+                val_b=0
+                total_epoch = 0
+                validation_true = []
+                validation_estimated = []
+                n = 0
+                # valid_dl.dataset.dataset.test_or_val = True
+                image_embeddings_val = []
+                report_embeddings_val = []
+                for num_batches_valid,(images, text,labells,masks) in enumerate(valid_dl):
+                    
+
+                    images, labells = images.to(device), labells.to(device)
+                    mask = text['attention_mask'].to(device)
+                    input_id = text['input_ids'].squeeze(1).to(device)
+                    
+                    pred,img_emb_q,report_emb_q,patch_emb_q = model(images.float(),input_id, mask)
+
+                    image_embeddings_val.append(img_emb_q)
+                    report_embeddings_val.append(report_emb_q)
+                    
+                    prob = torch.sigmoid(pred)
+
+                    
+                    for i in range(len(labells.tolist())):
+                        validation_true.append(labells.tolist()[i])#[0])
+                        validation_estimated.append(prob.tolist()[i])#[0])
+
+                    if ((num_batches_valid + 1) % num_batch_accumulate == 0) or (num_batches_valid + 1 == len(valid_dl)): 
+                        
+                        
+                        val_batches+=1
+                        image_embeddings_val = torch.cat(image_embeddings_val, dim=0)
+                        report_embeddings_val = torch.cat(report_embeddings_val, dim=0)
+                        bz = len(image_embeddings_val)
+                   
+                        prob = torch.sigmoid(pred)
+
+                        labs = torch.arange(bz).type_as(report_embeddings_val).long()
+                        labels = torch.eye(bz).type_as(report_embeddings_val)[labs]
+                        
+                        if args.similarity_measure=="euclidian":
+                            loss_fn = ContrastiveLoss_euclidean(margin=args.margin)
+                        else:
+                            loss_fn = ContrastiveLoss_cosine2(margin=args.margin)
+                        valid_loss,i_t_scores,t_i_scores = loss_fn(image_embeddings_val,report_embeddings_val,labels)
+                        i_t_scores=cosine_similarity(image_embeddings_val,report_embeddings_val)
+                        
+                        i2t_acc1_val,i2t_corr_val_batch,i2t_batch_val = precision_at_k(i_t_scores)#, labels, top_k=(1,))
+                        
+                        i2t_corr_val+=i2t_corr_val_batch
+                        batch_epoch_val+=i2t_batch_val
+                        
+                    
+                        val_loss += valid_loss.detach().item()
+                        image_embeddings_val = []
+                        report_embeddings_val = []
+   
+                    n = n + 1
+                val_loss = val_loss / (val_batches)#* batch_size)
+                print("validation_ita",val_loss)
+                i2t_precision_val=i2t_corr_val/batch_epoch_val
+                
+                print("validation precision", i2t_precision_val)#+t2i_precision_val)/2)
+                ita_list_val.append(val_loss)
+                test_true = []
+                test_estimated = []
+                
+
+               
+            val_auc = roc_auc_score(validation_true, validation_estimated)#,multi_class='ovr')
+            
+            train_auc = roc_auc_score(training_ture, training_estimated)#,multi_class='ovr')
+
+               
+
+        
+
+            total_train_auc[epoch] = train_auc
+            total_val_auc[epoch] = val_auc
+            ##### self-added
+            print("epoch",epoch,":","train_AUC:",train_auc,"val_AUC",val_auc)
+            if epoch >=50 and epoch%10==0:
+                print("ita_train_list",ita_list)
+                print("ita_valid_list",ita_list_val)
+            del valid_loss
+        model.eval()
+        with torch.set_grad_enabled(False):
+
+            
+            test_true = []
+            test_estimated = []
+            n = 0
+           
+            
+            for images, text,labells,masks in test_dl:
+                
+
+                images, labells = images.to(device), labells.to(device)
+                mask = text['attention_mask'].to(device)
+                input_id = text['input_ids'].squeeze(1).to(device)
+        
+                pred,image_emb_q,report_emb_q,patch_emb_q,word_feat_q,word_attn_q,sents,patch_atten_output,word_atten_output = model(images.float(),input_id, mask)#(**texts)#
+
+               
+                
+        
+                
+                prob = torch.sigmoid(pred)#F.softmax(pred, dim=1)
+                
+                
+                for i in range(len(labells.tolist())):
+                    test_true.append(labells.tolist()[i])#[0])
+                    test_estimated.append(prob.tolist()[i])#[0])
+                
+            test_auc = roc_auc_score(test_true, test_estimated)#,multi_class='ovr')
+            print("test_auc",test_auc)
+        if fold==0:
+            break
+
+    
+
+            
+
+    
+          
+
+
+    logging.info('Finished training.')
+
+
+    return 0, total_train_auc, 0, total_val_auc
+
+
+
+    
+
+
+
+
+
 def train_local_model(args, data_ds,test_dl, output_model_path, tuning=False):
     
     global_step = 0
@@ -1281,7 +1116,7 @@ def train_local_model(args, data_ds,test_dl, output_model_path, tuning=False):
     test_auc=[]
 #    optimizer.zero_grad()
 #    for t in range(n_trial):
-    weight_path="/hpf/largeprojects/fkhalvati/Sara/pretrain/resnet_18_23dataset.pth"
+    weight_path="sth/pretrain/resnet_18_23dataset.pth"
     best_auc=0
     for fold, (train_idx,val_idx) in enumerate(splits.split(np.arange(len(data_ds)))):
     
@@ -1951,7 +1786,7 @@ if __name__ == '__main__':
     # test_aucs=[]
 #    best_epochs = []
 #    trial_times = []
-    df_loc = pd.read_excel("/hpf/largeprojects/fkhalvati/Sara/lgg/Nomogram_study_LGG_data_Nov.27.xlsx",engine='openpyxl')
+    df_loc = pd.read_excel("sth.xlsx",engine='openpyxl')
     whole_data = BertDataset(data,image_folder, df_loc)#, patients_to_use)
     train_dataset,test_dataset = split_dataset_cv(whole_data,0.88)#0.8)#,0.6,0.2)#,0.6,0.2)
     file1 = open('test_dataset2', 'wb')
