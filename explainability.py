@@ -255,33 +255,20 @@ with torch.no_grad():
             # counter+=1
             print("shapees",labels.shape,masks.shape,input_data.shape)
 
-            del labels#,text
-            # masks=masks.unsqueeze(1)
+            del labels
+            
             
             input_data=input_data.float().cuda()
             masks=masks.cuda()
             
 
             
-            # input_data=input_data.requires_grad_(True).clone()
 
-            
-            # mask = text['attention_mask']
-            # input_id = text['input_ids'].squeeze(1)
-
-            # input_id=input_id.cuda()
-            # mask=mask.cuda()
-
-
-
-            # selected_slices[i, 0, :, :] = input_data[i, 0, :, :, largest_cross_section_indices[i]]
-
- 
             #CHANGE
             preds,attn = model(input_data.float())#,input_id,mask) #
 
             print("predsss",preds.shape)
-            probs = torch.sigmoid(preds).squeeze(0)#F.softmax(preds, dim=1).squeeze(0)#torch.sigmoid(preds).squeeze(0)
+            probs = torch.sigmoid(preds).squeeze(0)
             
             binary_preds = (probs >= 0.5).squeeze().to(torch.long)
             print("biiiiii",binary_preds)
