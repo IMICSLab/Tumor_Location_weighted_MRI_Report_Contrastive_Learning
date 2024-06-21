@@ -546,7 +546,7 @@ if __name__ == '__main__':
             # weight_path = os.path.join(args.output_dir,f"new_image_text_tl_attention_fold__{i}{path}")
             # weight_path = os.path.join(args.output_dir,f"transformer_baseline_text_lr(9e-5)_({i+1}, {path+1}).pth")#{i+1}{path+1}")
             # weight_path = os.path.join(args.output_dir,f"whole_MRI_withoutlayer3_classification__valid_fold__lr0.0001_0{path}.pth")
-            weight_path=f"/hpf/largeprojects/fkhalvati/Sara/pLGG_results/image_text/_ds_local_cross19update_downstream_whole_MRI_classification__valid_fold__lr0.0003_00.pth"
+            weight_path=f"sth/_ds_local_cross19update_downstream_whole_MRI_classification__valid_fold__lr0.0003_{i}{path}.pth"
 
            
             ####
