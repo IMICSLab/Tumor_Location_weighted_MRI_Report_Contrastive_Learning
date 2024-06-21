@@ -31,16 +31,8 @@ from skimage.metrics import contingency_table
 from medcam import medcam
 from matplotlib.transforms import Affine2D
 import mpl_toolkits.axisartist.floating_axes as floating_axes
-# from torchvision.transforms.functional import ssim
 
-# file = open('input_tokenized_text', 'rb') #important
-    
-# # dump information to that file
 
-# df_text_excel = pickle.load(file)
-
-# # close the file
-# file.close()
 
 
 def soft_dice_coefficient(y_true, y_pred, smooth):  # extracted from: https://github.com/myidispg/kaggle-cloud/blob/20f20a9be25d872e5c5d5ec62b28ad656d516270/utils/helpers.py#L61
@@ -63,30 +55,23 @@ def dice_coefficient(y_pred, y_true, smooth=1.0):
 
 
 
-def normalize_mask(mask):
-    min_val = np.min(mask)
-    max_val = np.max(mask)
-    normalized_mask = (mask - min_val) / (max_val - min_val)
-    return normalized_mask
+
+
+def normalize_heatmap(heatmap):
+    min_val = torch.min(heatmap)
+    max_val = torch.max(heatmap)
+    normalized_heatmap = (heatmap - min_val) / (max_val - min_val)
+    return normalized_heatmap
 
 
 
 
-
-# data=process_excel(df_text_excel)
-# data.index=range(data.shape[0])
-# image_folder=""
-# dataset = BertDataset(data,image_folder)
-# test_dl = DataLoader(dataset, batch_size=4)
 
 inplanes=[64, 128, 256, 512]
-# model = image_text()
-# model=generate_model(model_depth=18, n_classes=1039,inplanes=inplanes)
-# weight_path = "sth/image_text/whole_MRI_classification__valid_fold__0"
+
 weight_path = "sth/pLGG_results/image_text"
 weight_path1 = "sth/pLGG_results"
-# model.conv1 = nn.Conv3d(1, 64, kernel_size=(7, 7, 7), stride=(1, 2, 2), padding=(3, 3, 3), bias=False)
-# model.fc = nn.Linear(512, 1)
+
 
 
 
@@ -310,11 +295,7 @@ with torch.no_grad():
             print("pred_idx",probs,pred_idx, input_data.shape , masks.shape,probs.shape,pred_idx.shape)
             masks = masks.unsqueeze(1)
             
-            def normalize_heatmap(heatmap):
-                min_val = torch.min(heatmap)
-                max_val = torch.max(heatmap)
-                normalized_heatmap = (heatmap - min_val) / (max_val - min_val)
-                return normalized_heatmap
+            
 
             
            
