@@ -40,7 +40,7 @@ pil_logger = logging.getLogger('PIL').setLevel(logging.INFO)
 def make_parser():
     
 
-    
+    parser = argparse.ArgumentParser(description='MRI-Report COntrastive Learning')
     parser.add_argument('--data_path', type=str, default="sth.xlsx")
     parser.add_argument('--image_path', type=str, default="sth")
     parser.add_argument('--output_dir', type=str, default='sth')
@@ -114,6 +114,340 @@ class DynamicWeightedLoss(nn.Module):
         total_loss = torch.sum(weighted_losses)
         return total_loss , self.weights
 
+
+            
+
+def train_global_model(args, data_ds,test_dl, output_model_path, tuning=False):
+    
+    global_step = 0
+    temperature=0.1
+    softmax_temperature= 0.07
+    local_temperature=0.1
+   
+    lambda_1: float =1
+    lambda_2: float =1
+    
+    lambda_3: float = 0.125
+    num_heads = 1
+    emb_dim = 128
+    
+
+    batch_size=args.batch_size
+    num_batch_accumulate = args.accumulate/batch_size #128 / batch_size
+ 
+    classifier_criterion = nn.BCEWithLogitsLoss()
+    total_train_auc={}
+    total_val_auc={}
+    test_auc=[]
+
+    weight_path="sth/pretrain/resnet_18_23dataset.pth"
+    best_auc=0
+    for fold, (train_idx,val_idx) in enumerate(splits.split(np.arange(len(data_ds)))):
+    
+        print('Fold {}'.format(fold + 1))
+        train_sampler = SubsetRandomSampler(train_idx)
+        test_sampler = SubsetRandomSampler(val_idx)
+        train_dl = DataLoader(data_ds, batch_size=batch_size, sampler=train_sampler)
+        valid_dl = DataLoader(data_ds, batch_size=batch_size, sampler=test_sampler)
+        train_dl = DataLoader(whole_data, batch_size=batch_size,shuffle=True)
+        print("lenn",len(train_dl))
+        model=image_text_attention_global(emb_dim=128,num_heads=num_heads,mode="global")
+        # opt={}
+        ##################3pretrain
+        # model = generate_model(model_depth=18, inplanes=inplanes, n_classes=1039)
+        model.cnn.conv1 = nn.Conv3d(1, 64, kernel_size=(7, 7, 7), stride=(1, 2, 2), padding=(3, 3, 3), bias=False)
+        model.cnn.fc  = nn.Linear(512, 1)
+        net_dict = model.cnn.state_dict()
+        
+        pretrain = torch.load(weight_path)
+        pretrain['state_dict'] = {k.replace('module.', ''): v for k, v in pretrain['state_dict'].items()}
+        pretrain_dict = {k: v for k, v in pretrain['state_dict'].items() if k in net_dict.keys()}
+         
+        net_dict.update(pretrain_dict)
+        model.cnn.load_state_dict(net_dict)
+        ##############3pretrain
+       
+        for pname, p in model.cnn.named_parameters():
+            p.requires_grad = False
+        # for pname, p in model.cnn.conv1.named_parameters():
+        #     p.requires_grad = True
+        # for pname, p in model.cnn.layer2.named_parameters():
+        #     p.requires_grad = True
+        for p in model.cnn.layer4.parameters():
+            p.requires_grad = True
+        for p in model.cnn.layer3.parameters():
+            p.requires_grad = True
+        for p in model.cnn.fc.parameters():
+            p.requires_grad = False
+        
+        optimizer = AdamW(model.parameters(), lr=args.lr)
+       
+        scheduler = CosineAnnealingWarmRestarts(optimizer,T_0=400,T_mult=1, eta_min=1e-8, last_epoch=-1)
+            
+        
+        optimizer.zero_grad()
+        ita_list=[]
+        ita_list_val=[]
+        local_list=[]
+        cl_list=[]
+        for epoch in range(args.num_epochs):
+            model.train()
+            
+            train_loss = 0
+            counter = 0
+            num_batches=0
+            num_batches_valid=0
+            val_batches=0
+            val_batch=0
+            train_batches=0
+            epoch_loss = 0
+            training_ture=[]
+            training_estimated=[]
+     #       print(len(train_dl))
+            i2t_corr_tr=0
+            batch_epoch_tr=0
+            i2t_corr_val=0
+            t2i_corr_tr=0
+            t2i_corr_val=0
+            batch_epoch_val=0
+            
+            
+            report_embeddings = []
+            image_embeddings=[]
+            label_list=[]
+            pred_list=[]
+           
+            for num_batches,(images,text, labells,masks) in enumerate(train_dl): 
+                # print("HI")
+                # print("report",len(report_embeddings))
+                device="cuda:0"#torch.device("cuda:0")
+                images= images.to(device)#,labells.to(device)
+                labells= labells.to(device)
+                mask = text['attention_mask'].to(device)
+                input_id = text['input_ids'].squeeze(1).to(device)
+
+ 
+ 
+                images=images.float()
+                pred,img_emb_q,report_emb_q,patch_emb_q= model(images,input_id, mask)
+                # print("patch_emb_q",patch_emb_q.shape)
+                pred_list.append(pred)
+                label_list.append(labells)
+                # print("params",model.parameters)
+                
+                prob = torch.sigmoid(pred)
+                image_embeddings.append(img_emb_q)
+                report_embeddings.append(report_emb_q)
+                
+                # euclidean_distance = torch.nn.functional.pairwise_distance(img_emb_q, report_emb_q, keepdim=True)
+                
+                if ((num_batches + 1) % num_batch_accumulate == 0) or (num_batches + 1 == len(train_dl)):
+                    
+                    
+                    report_embeddings = torch.cat(report_embeddings, dim=0)
+                    # print("reporttttt",report_embeddings.shape)
+                    image_embeddings=torch.cat(image_embeddings, dim=0)   
+                    pred_batch=torch.cat(pred_list, dim=0) 
+                    label_batch=torch.cat(label_list, dim=0) 
+                    # print("imageee",image_embeddings.shape)                  
+                    bz = len(report_embeddings)
+                    
+                   
+                    labs = torch.arange(bz).type_as(report_emb_q).long() #global
+                    labels = torch.eye(bz).type_as(report_emb_q)[labs] #global
+                    
+                    # print("labellllls",labels.shape)
+                    if args.similarity_measure=="euclidian":
+                        # print("ok")
+                        loss_fn = ContrastiveLoss_euclidean(margin=args.margin)
+                    else:
+                        loss_fn =ContrastiveLoss_cosine2(margin=args.margin)
+                    loss0,i_t_scores,t_i_scores = loss_fn(image_embeddings,report_embeddings,labels)
+                    i_t_scores=cosine_similarity(image_embeddings,report_embeddings)
+                    i2t_acc1_tr,i2t_corr_tr_batch,i2t_batch_tr = precision_at_k(i_t_scores)#, labels, top_k=(1,))
+                    print("pr",i2t_acc1_tr)
+                    
+                    i2t_corr_tr+=i2t_corr_tr_batch
+                    
+                    
+                    batch_epoch_tr+=i2t_batch_tr
+                    # print("training precision",(i2t_acc1_tr[0] + t2i_acc1_tr[0]) / 2.)
+                    loss0.backward()
+
+
+                    optimizer.step() 
+                    
+                    optimizer.zero_grad() 
+                    train_loss+=loss0.detach().item()#*batch_size ### Sajith: added detach 
+                    train_batches+=1
+
+                    # distance_list = []
+                    image_embeddings = []
+                    report_embeddings = []
+                    pred_list=[]
+                    label_list=[]
+                    # image_embeddings_1 = torch.Tensor().cuda()
+                    # image_embeddings = torch.Tensor().cuda()
+
+                    # report_embeddings = torch.Tensor().cuda()
+                for i in range(len(labells.tolist())):
+                    # print("ll",labells)
+                    
+                    training_ture.append(labells.tolist()[i])#[0])
+                    training_estimated.append(prob.tolist()[i])#[0]) #prob
+              
+                counter += 1
+
+            
+            train_loss = train_loss/(train_batches)#*batch_size)  
+            print("loss_ita",train_loss)
+            ita_list.append(train_loss)
+            if epoch%10==0:
+                torch.save(model.state_dict(), os.path.join(args.output_dir,f"cls_global_only__fold__{fold}__epoch__{epoch}__margin{args.margin}_similarity{args.similarity_measure}"))
+            del loss0 ### Sajith 
+            
+            i2t_precision_tr=i2t_corr_tr/batch_epoch_tr
+           
+            print("training precision", i2t_precision_tr)##+t2i_precision_tr)/2)
+            model.eval()
+            with torch.set_grad_enabled(False):
+
+                val_loss = 0.0
+                val_b=0
+                total_epoch = 0
+                validation_true = []
+                validation_estimated = []
+                n = 0
+                # valid_dl.dataset.dataset.test_or_val = True
+                image_embeddings_val = []
+                report_embeddings_val = []
+                for num_batches_valid,(images, text,labells,masks) in enumerate(valid_dl):
+                    
+
+                    images, labells = images.to(device), labells.to(device)
+                    mask = text['attention_mask'].to(device)
+                    input_id = text['input_ids'].squeeze(1).to(device)
+                    
+                    pred,img_emb_q,report_emb_q,patch_emb_q = model(images.float(),input_id, mask)
+
+                    image_embeddings_val.append(img_emb_q)
+                    report_embeddings_val.append(report_emb_q)
+                    
+                    prob = torch.sigmoid(pred)
+
+                    
+                    for i in range(len(labells.tolist())):
+                        validation_true.append(labells.tolist()[i])#[0])
+                        validation_estimated.append(prob.tolist()[i])#[0])
+
+                    if ((num_batches_valid + 1) % num_batch_accumulate == 0) or (num_batches_valid + 1 == len(valid_dl)): 
+                        
+                        
+                        val_batches+=1
+                        image_embeddings_val = torch.cat(image_embeddings_val, dim=0)
+                        report_embeddings_val = torch.cat(report_embeddings_val, dim=0)
+                        bz = len(image_embeddings_val)
+                   
+                        prob = torch.sigmoid(pred)
+
+                        labs = torch.arange(bz).type_as(report_embeddings_val).long()
+                        labels = torch.eye(bz).type_as(report_embeddings_val)[labs]
+                        
+                        if args.similarity_measure=="euclidian":
+                            loss_fn = ContrastiveLoss_euclidean(margin=args.margin)
+                        else:
+                            loss_fn = ContrastiveLoss_cosine2(margin=args.margin)
+                        valid_loss,i_t_scores,t_i_scores = loss_fn(image_embeddings_val,report_embeddings_val,labels)
+                        i_t_scores=cosine_similarity(image_embeddings_val,report_embeddings_val)
+                        
+                        i2t_acc1_val,i2t_corr_val_batch,i2t_batch_val = precision_at_k(i_t_scores)#, labels, top_k=(1,))
+                        
+                        i2t_corr_val+=i2t_corr_val_batch
+                        batch_epoch_val+=i2t_batch_val
+                        
+                    
+                        val_loss += valid_loss.detach().item()
+                        image_embeddings_val = []
+                        report_embeddings_val = []
+   
+                    n = n + 1
+                val_loss = val_loss / (val_batches)#* batch_size)
+                print("validation_ita",val_loss)
+                i2t_precision_val=i2t_corr_val/batch_epoch_val
+                
+                print("validation precision", i2t_precision_val)#+t2i_precision_val)/2)
+                ita_list_val.append(val_loss)
+                test_true = []
+                test_estimated = []
+                
+
+               
+            val_auc = roc_auc_score(validation_true, validation_estimated)#,multi_class='ovr')
+            
+            train_auc = roc_auc_score(training_ture, training_estimated)#,multi_class='ovr')
+
+               
+
+        
+
+            total_train_auc[epoch] = train_auc
+            total_val_auc[epoch] = val_auc
+            ##### self-added
+            print("epoch",epoch,":","train_AUC:",train_auc,"val_AUC",val_auc)
+            if epoch >=50 and epoch%10==0:
+                print("ita_train_list",ita_list)
+                print("ita_valid_list",ita_list_val)
+            del valid_loss
+        model.eval()
+        with torch.set_grad_enabled(False):
+
+            
+            test_true = []
+            test_estimated = []
+            n = 0
+           
+            
+            for images, text,labells,masks in test_dl:
+                
+
+                images, labells = images.to(device), labells.to(device)
+                mask = text['attention_mask'].to(device)
+                input_id = text['input_ids'].squeeze(1).to(device)
+        
+                pred,image_emb_q,report_emb_q,patch_emb_q,word_feat_q,word_attn_q,sents,patch_atten_output,word_atten_output = model(images.float(),input_id, mask)#(**texts)#
+
+               
+                
+        
+                
+                prob = torch.sigmoid(pred)#F.softmax(pred, dim=1)
+                
+                
+                for i in range(len(labells.tolist())):
+                    test_true.append(labells.tolist()[i])#[0])
+                    test_estimated.append(prob.tolist()[i])#[0])
+                
+            test_auc = roc_auc_score(test_true, test_estimated)#,multi_class='ovr')
+            print("test_auc",test_auc)
+        if fold==0:
+            break
+
+    
+
+            
+
+    
+          
+
+
+    logging.info('Finished training.')
+
+
+    return 0, total_train_auc, 0, total_val_auc
+
+
+
+    
 def train_global_local_model(args, data_ds,test_dl, output_model_path, tuning=False):
     
     global_step = 0
@@ -128,17 +462,14 @@ def train_global_local_model(args, data_ds,test_dl, output_model_path, tuning=Fa
     num_heads = 2
     emb_dim = 128
     
- #   optimizer = optim.Adam(model.parameters(), lr=args.lr)
-    # clr = cyclical_lr(step_sz=args.step_size, min_lr=args.lr, max_lr=1, mode='triangular2')
+ 
     batch_size=args.batch_size
     num_batch_accumulate = args.accumulate/batch_size #128 / batch_size
  
-    classifier_criterion = nn.BCEWithLogitsLoss()#BCELoss()#.
+    classifier_criterion = nn.BCEWithLogitsLoss()
     total_train_auc={}
     total_val_auc={}
     test_auc=[]
-#    optimizer.zero_grad()
-#    for t in range(n_trial):
     weight_path="sth/pretrain/resnet_18_23dataset.pth"
     best_auc=0
 
@@ -147,9 +478,8 @@ def train_global_local_model(args, data_ds,test_dl, output_model_path, tuning=Fa
         print('Fold {}'.format(fold + 1))
         train_sampler = SubsetRandomSampler(train_idx)
         test_sampler = SubsetRandomSampler(val_idx)
-        # train_dl = DataLoader(data_ds, batch_size=batch_size, sampler=train_sampler)
         valid_dl = DataLoader(data_ds, batch_size=batch_size, sampler=test_sampler)
-        train_dl = DataLoader(data_ds, batch_size=batch_size, shuffle=True) #whole_data
+        train_dl = DataLoader(data_ds, batch_size=batch_size, shuffle=True) 
         model=image_text_attention(emb_dim=128,num_heads=num_heads,mode="global_local")
         # print("self",model.cnn.in_planes)
         # opt={}
@@ -753,340 +1083,6 @@ def train_global_local_model(args, data_ds,test_dl, output_model_path, tuning=Fa
 
     # return total_train_err, total_train_loss, total_train_auc, total_val_err, total_val_loss, total_val_auc
     return 0, total_train_auc, 0, total_val_auc
-            
-
-def train_global_model(args, data_ds,test_dl, output_model_path, tuning=False):
-    
-    global_step = 0
-    temperature=0.1
-    softmax_temperature= 0.07
-    local_temperature=0.1
-   
-    lambda_1: float =1
-    lambda_2: float =1
-    
-    lambda_3: float = 0.125
-    num_heads = 1
-    emb_dim = 128
-    
-
-    batch_size=args.batch_size
-    num_batch_accumulate = args.accumulate/batch_size #128 / batch_size
- 
-    classifier_criterion = nn.BCEWithLogitsLoss()
-    total_train_auc={}
-    total_val_auc={}
-    test_auc=[]
-
-    weight_path="sth/pretrain/resnet_18_23dataset.pth"
-    best_auc=0
-    for fold, (train_idx,val_idx) in enumerate(splits.split(np.arange(len(data_ds)))):
-    
-        print('Fold {}'.format(fold + 1))
-        train_sampler = SubsetRandomSampler(train_idx)
-        test_sampler = SubsetRandomSampler(val_idx)
-        train_dl = DataLoader(data_ds, batch_size=batch_size, sampler=train_sampler)
-        valid_dl = DataLoader(data_ds, batch_size=batch_size, sampler=test_sampler)
-        train_dl = DataLoader(whole_data, batch_size=batch_size,shuffle=True)
-        print("lenn",len(train_dl))
-        model=image_text_attention_global(emb_dim=128,num_heads=num_heads,mode="global")
-        # opt={}
-        ##################3pretrain
-        # model = generate_model(model_depth=18, inplanes=inplanes, n_classes=1039)
-        model.cnn.conv1 = nn.Conv3d(1, 64, kernel_size=(7, 7, 7), stride=(1, 2, 2), padding=(3, 3, 3), bias=False)
-        model.cnn.fc  = nn.Linear(512, 1)
-        net_dict = model.cnn.state_dict()
-        
-        pretrain = torch.load(weight_path)
-        pretrain['state_dict'] = {k.replace('module.', ''): v for k, v in pretrain['state_dict'].items()}
-        pretrain_dict = {k: v for k, v in pretrain['state_dict'].items() if k in net_dict.keys()}
-         
-        net_dict.update(pretrain_dict)
-        model.cnn.load_state_dict(net_dict)
-        ##############3pretrain
-       
-        for pname, p in model.cnn.named_parameters():
-            p.requires_grad = False
-        # for pname, p in model.cnn.conv1.named_parameters():
-        #     p.requires_grad = True
-        # for pname, p in model.cnn.layer2.named_parameters():
-        #     p.requires_grad = True
-        for p in model.cnn.layer4.parameters():
-            p.requires_grad = True
-        for p in model.cnn.layer3.parameters():
-            p.requires_grad = True
-        for p in model.cnn.fc.parameters():
-            p.requires_grad = False
-        
-        optimizer = AdamW(model.parameters(), lr=args.lr)
-       
-        scheduler = CosineAnnealingWarmRestarts(optimizer,T_0=400,T_mult=1, eta_min=1e-8, last_epoch=-1)
-            
-        
-        optimizer.zero_grad()
-        ita_list=[]
-        ita_list_val=[]
-        local_list=[]
-        cl_list=[]
-        for epoch in range(args.num_epochs):
-            model.train()
-            
-            train_loss = 0
-            counter = 0
-            num_batches=0
-            num_batches_valid=0
-            val_batches=0
-            val_batch=0
-            train_batches=0
-            epoch_loss = 0
-            training_ture=[]
-            training_estimated=[]
-     #       print(len(train_dl))
-            i2t_corr_tr=0
-            batch_epoch_tr=0
-            i2t_corr_val=0
-            t2i_corr_tr=0
-            t2i_corr_val=0
-            batch_epoch_val=0
-            
-            
-            report_embeddings = []
-            image_embeddings=[]
-            label_list=[]
-            pred_list=[]
-           
-            for num_batches,(images,text, labells,masks) in enumerate(train_dl): 
-                # print("HI")
-                # print("report",len(report_embeddings))
-                device="cuda:0"#torch.device("cuda:0")
-                images= images.to(device)#,labells.to(device)
-                labells= labells.to(device)
-                mask = text['attention_mask'].to(device)
-                input_id = text['input_ids'].squeeze(1).to(device)
-
- 
- 
-                images=images.float()
-                pred,img_emb_q,report_emb_q,patch_emb_q= model(images,input_id, mask)
-                # print("patch_emb_q",patch_emb_q.shape)
-                pred_list.append(pred)
-                label_list.append(labells)
-                # print("params",model.parameters)
-                
-                prob = torch.sigmoid(pred)
-                image_embeddings.append(img_emb_q)
-                report_embeddings.append(report_emb_q)
-                
-                # euclidean_distance = torch.nn.functional.pairwise_distance(img_emb_q, report_emb_q, keepdim=True)
-                
-                if ((num_batches + 1) % num_batch_accumulate == 0) or (num_batches + 1 == len(train_dl)):
-                    
-                    
-                    report_embeddings = torch.cat(report_embeddings, dim=0)
-                    # print("reporttttt",report_embeddings.shape)
-                    image_embeddings=torch.cat(image_embeddings, dim=0)   
-                    pred_batch=torch.cat(pred_list, dim=0) 
-                    label_batch=torch.cat(label_list, dim=0) 
-                    # print("imageee",image_embeddings.shape)                  
-                    bz = len(report_embeddings)
-                    
-                   
-                    labs = torch.arange(bz).type_as(report_emb_q).long() #global
-                    labels = torch.eye(bz).type_as(report_emb_q)[labs] #global
-                    
-                    # print("labellllls",labels.shape)
-                    if args.similarity_measure=="euclidian":
-                        # print("ok")
-                        loss_fn = ContrastiveLoss_euclidean(margin=args.margin)
-                    else:
-                        loss_fn =ContrastiveLoss_cosine2(margin=args.margin)
-                    loss0,i_t_scores,t_i_scores = loss_fn(image_embeddings,report_embeddings,labels)
-                    i_t_scores=cosine_similarity(image_embeddings,report_embeddings)
-                    i2t_acc1_tr,i2t_corr_tr_batch,i2t_batch_tr = precision_at_k(i_t_scores)#, labels, top_k=(1,))
-                    print("pr",i2t_acc1_tr)
-                    
-                    i2t_corr_tr+=i2t_corr_tr_batch
-                    
-                    
-                    batch_epoch_tr+=i2t_batch_tr
-                    # print("training precision",(i2t_acc1_tr[0] + t2i_acc1_tr[0]) / 2.)
-                    loss0.backward()
-
-
-                    optimizer.step() 
-                    
-                    optimizer.zero_grad() 
-                    train_loss+=loss0.detach().item()#*batch_size ### Sajith: added detach 
-                    train_batches+=1
-
-                    # distance_list = []
-                    image_embeddings = []
-                    report_embeddings = []
-                    pred_list=[]
-                    label_list=[]
-                    # image_embeddings_1 = torch.Tensor().cuda()
-                    # image_embeddings = torch.Tensor().cuda()
-
-                    # report_embeddings = torch.Tensor().cuda()
-                for i in range(len(labells.tolist())):
-                    # print("ll",labells)
-                    
-                    training_ture.append(labells.tolist()[i])#[0])
-                    training_estimated.append(prob.tolist()[i])#[0]) #prob
-              
-                counter += 1
-
-            
-            train_loss = train_loss/(train_batches)#*batch_size)  
-            print("loss_ita",train_loss)
-            ita_list.append(train_loss)
-            if epoch%10==0:
-                torch.save(model.state_dict(), os.path.join(args.output_dir,f"cls_global_only__fold__{fold}__epoch__{epoch}__margin{args.margin}_similarity{args.similarity_measure}"))
-            del loss0 ### Sajith 
-            
-            i2t_precision_tr=i2t_corr_tr/batch_epoch_tr
-           
-            print("training precision", i2t_precision_tr)##+t2i_precision_tr)/2)
-            model.eval()
-            with torch.set_grad_enabled(False):
-
-                val_loss = 0.0
-                val_b=0
-                total_epoch = 0
-                validation_true = []
-                validation_estimated = []
-                n = 0
-                # valid_dl.dataset.dataset.test_or_val = True
-                image_embeddings_val = []
-                report_embeddings_val = []
-                for num_batches_valid,(images, text,labells,masks) in enumerate(valid_dl):
-                    
-
-                    images, labells = images.to(device), labells.to(device)
-                    mask = text['attention_mask'].to(device)
-                    input_id = text['input_ids'].squeeze(1).to(device)
-                    
-                    pred,img_emb_q,report_emb_q,patch_emb_q = model(images.float(),input_id, mask)
-
-                    image_embeddings_val.append(img_emb_q)
-                    report_embeddings_val.append(report_emb_q)
-                    
-                    prob = torch.sigmoid(pred)
-
-                    
-                    for i in range(len(labells.tolist())):
-                        validation_true.append(labells.tolist()[i])#[0])
-                        validation_estimated.append(prob.tolist()[i])#[0])
-
-                    if ((num_batches_valid + 1) % num_batch_accumulate == 0) or (num_batches_valid + 1 == len(valid_dl)): 
-                        
-                        
-                        val_batches+=1
-                        image_embeddings_val = torch.cat(image_embeddings_val, dim=0)
-                        report_embeddings_val = torch.cat(report_embeddings_val, dim=0)
-                        bz = len(image_embeddings_val)
-                   
-                        prob = torch.sigmoid(pred)
-
-                        labs = torch.arange(bz).type_as(report_embeddings_val).long()
-                        labels = torch.eye(bz).type_as(report_embeddings_val)[labs]
-                        
-                        if args.similarity_measure=="euclidian":
-                            loss_fn = ContrastiveLoss_euclidean(margin=args.margin)
-                        else:
-                            loss_fn = ContrastiveLoss_cosine2(margin=args.margin)
-                        valid_loss,i_t_scores,t_i_scores = loss_fn(image_embeddings_val,report_embeddings_val,labels)
-                        i_t_scores=cosine_similarity(image_embeddings_val,report_embeddings_val)
-                        
-                        i2t_acc1_val,i2t_corr_val_batch,i2t_batch_val = precision_at_k(i_t_scores)#, labels, top_k=(1,))
-                        
-                        i2t_corr_val+=i2t_corr_val_batch
-                        batch_epoch_val+=i2t_batch_val
-                        
-                    
-                        val_loss += valid_loss.detach().item()
-                        image_embeddings_val = []
-                        report_embeddings_val = []
-   
-                    n = n + 1
-                val_loss = val_loss / (val_batches)#* batch_size)
-                print("validation_ita",val_loss)
-                i2t_precision_val=i2t_corr_val/batch_epoch_val
-                
-                print("validation precision", i2t_precision_val)#+t2i_precision_val)/2)
-                ita_list_val.append(val_loss)
-                test_true = []
-                test_estimated = []
-                
-
-               
-            val_auc = roc_auc_score(validation_true, validation_estimated)#,multi_class='ovr')
-            
-            train_auc = roc_auc_score(training_ture, training_estimated)#,multi_class='ovr')
-
-               
-
-        
-
-            total_train_auc[epoch] = train_auc
-            total_val_auc[epoch] = val_auc
-            ##### self-added
-            print("epoch",epoch,":","train_AUC:",train_auc,"val_AUC",val_auc)
-            if epoch >=50 and epoch%10==0:
-                print("ita_train_list",ita_list)
-                print("ita_valid_list",ita_list_val)
-            del valid_loss
-        model.eval()
-        with torch.set_grad_enabled(False):
-
-            
-            test_true = []
-            test_estimated = []
-            n = 0
-           
-            
-            for images, text,labells,masks in test_dl:
-                
-
-                images, labells = images.to(device), labells.to(device)
-                mask = text['attention_mask'].to(device)
-                input_id = text['input_ids'].squeeze(1).to(device)
-        
-                pred,image_emb_q,report_emb_q,patch_emb_q,word_feat_q,word_attn_q,sents,patch_atten_output,word_atten_output = model(images.float(),input_id, mask)#(**texts)#
-
-               
-                
-        
-                
-                prob = torch.sigmoid(pred)#F.softmax(pred, dim=1)
-                
-                
-                for i in range(len(labells.tolist())):
-                    test_true.append(labells.tolist()[i])#[0])
-                    test_estimated.append(prob.tolist()[i])#[0])
-                
-            test_auc = roc_auc_score(test_true, test_estimated)#,multi_class='ovr')
-            print("test_auc",test_auc)
-        if fold==0:
-            break
-
-    
-
-            
-
-    
-          
-
-
-    logging.info('Finished training.')
-
-
-    return 0, total_train_auc, 0, total_val_auc
-
-
-
-    
-
 
 
 
