@@ -1,6 +1,6 @@
 This repository contains the code for our paper titled: "Tumor Location-weighted MRI-Report Contrastive Learning: A Framework for Improving the Explainability of Pediatric Brain Tumor Diagnosis".
 The breakdown of the repository is as follows:
-- data: dataset classes and useful functions 
+- data: dataset classes  
 - losses: losses and metrics
 - model: model-related classes and elements
 - explainability.py: the code for extracting model attention maps and computing explainability metrics 
