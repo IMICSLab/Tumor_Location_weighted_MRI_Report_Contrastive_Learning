@@ -2,21 +2,20 @@ import torch
 import pandas as pd
 from captum.attr import LayerGradCam,GuidedGradCam,Lime
 import matplotlib.pyplot as plt
-from fused_model_copy import generate_model
-from fused_model import downstream_image_classifier,SelfAttention,DepthAttention
+from model.fused_model import downstream_image_classifier,SelfAttention,DepthAttention
 from captum.attr import IntegratedGradients,LRP,FeatureAblation,ShapleyValues,FeaturePermutation,Saliency,Occlusion
 import torch.nn as nn
 import numpy as np
 from PIL import Image
 import os 
 from captum.attr._utils.attribution import GradientAttribution, LayerAttribution
-from fused_dataset import split_dataset_cv,process_excel,BertDataset,Eval_new_sk
+from data.fused_dataset import split_dataset_cv,process_excel,BertDataset,Eval_new_sk
 import pickle
 from torch.utils.data import DataLoader
 from torchvision.transforms import Resize
 import torch.nn.functional as F
 from sklearn.metrics import roc_auc_score
-from fused_model import image_text,ResNet_attention,BasicBlock, ResNet_attention2
+from model.fused_model import image_text,ResNet_attention,BasicBlock, ResNet_attention2
 import nibabel as nib
 from PIL import Image
 from lime import lime_image
