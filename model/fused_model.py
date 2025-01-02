@@ -23,6 +23,7 @@ from einops import rearrange
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from sklearn import metrics
 from torch.autograd import Variable
+
 # transformers
 class BertClassifier(nn.Module): #(GPT2ForSequenceClassification):#
 
@@ -118,11 +119,7 @@ class BertClassifier(nn.Module): #(GPT2ForSequenceClassification):#
 
 
 
-
-
-
-
-# RESNET  #from here
+# RESNET  
 
 # Resnet architecture was extracted from: https://github.com/Tencent/MedicalNet
 def conv3x3x3(in_planes, out_planes, stride=1):
