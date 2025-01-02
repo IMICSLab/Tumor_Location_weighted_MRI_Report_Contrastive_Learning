@@ -184,9 +184,6 @@ def process_excel(df_data):
 
 
 
-        
-
-
 
 
 class Eval_new_sk(Dataset):
