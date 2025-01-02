@@ -7,7 +7,7 @@ import numpy as np
 from pytorch_metric_learning import losses
 from pytorch_metric_learning.losses import SelfSupervisedLoss,NTXentLoss
 from pytorch_metric_learning.distances import CosineSimilarity
-from fused_model import CrossAttention
+from model.fused_model import CrossAttention
 
 
 
