@@ -40,9 +40,6 @@ def triplet_loss_with_cosine_distance(anc, pos, neg, loc_label, margin,mode):
 
 
 
-
-
-
 class ContrastiveLoss_cosine2(nn.Module):
     def __init__(self, margin,mode):
         super(ContrastiveLoss_cosine2, self).__init__()
