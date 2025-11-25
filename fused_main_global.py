@@ -57,11 +57,11 @@ def make_parser():
     parser = argparse.ArgumentParser(description='PyTorch SickKids Brain MRI')
 
     # Data
-    parser.add_argument('--data_path', type=str, default="/hpf/largeprojects/fkhalvati/Sara/lgg/Nomogram_study_LGG_data_Nov.27.xlsx", help='Data path')
-    parser.add_argument('--image_path', type=str, default="/hpf/largeprojects/fkhalvati/Projects/SickKids_Brain_Preprocessing/preprocessed_all_seq_kk_july_2022", help='image_path')
+    parser.add_argument('--data_path', type=str, default="sth.xlsx", help='Data path')
+    parser.add_argument('--image_path', type=str, default="sth", help='image_path')
     #parser.add_argument('--heatmaps_path', type=str, help='Heatmaps directory',
                        # default='/home/k/khalvati/agniho24/Dataset/fixation_heatmaps')
-    parser.add_argument('--output_dir', type=str, default='/hpf/largeprojects/fkhalvati/Sara/pLGG_results/image_text', help='Output directory')
+    parser.add_argument('--output_dir', type=str, default='sth', help='Output directory')
     parser.add_argument('--class_names', type=list, default=['other', 'Pilocytic Astrocytoma', 'Ganglioglioma'], help='Label names for classification')
     parser.add_argument('--num_workers', type=int, default=16, help='number of workers')
     parser.add_argument('--resize', type=int, default=224, help='Resizing images')
@@ -174,7 +174,7 @@ def train_global_model(args, data_ds,test_dl, output_model_path, tuning=False):
     test_auc=[]
 #    optimizer.zero_grad()
 #    for t in range(n_trial):
-    weight_path="/hpf/largeprojects/fkhalvati/Sara/pretrain/resnet_18_23dataset.pth"
+    weight_path="sth.pth"
     best_auc=0
     for fold, (train_idx,val_idx) in enumerate(splits.split(np.arange(len(data_ds)))):
     
@@ -655,7 +655,7 @@ def train_global_local_model(args, data_ds,test_dl, output_model_path, tuning=Fa
     test_auc=[]
 #    optimizer.zero_grad()
 #    for t in range(n_trial):
-    weight_path="/hpf/largeprojects/fkhalvati/Sara/pretrain/resnet_18_23dataset.pth"
+    weight_path="sth.pth"
     best_auc=0
 
     for fold, (train_idx,val_idx) in enumerate(splits.split(np.arange(len(data_ds)))):
@@ -1296,7 +1296,7 @@ def train_local_model(args, data_ds,test_dl, output_model_path, tuning=False):
     test_auc=[]
 #    optimizer.zero_grad()
 #    for t in range(n_trial):
-    weight_path="/hpf/largeprojects/fkhalvati/Sara/pretrain/resnet_18_23dataset.pth"
+    weight_path="sth.pth"
     best_auc=0
     for fold, (train_idx,val_idx) in enumerate(splits.split(np.arange(len(data_ds)))):
     
@@ -1988,7 +1988,7 @@ if __name__ == '__main__':
     # test_aucs=[]
 #    best_epochs = []
 #    trial_times = []
-    df_loc = pd.read_excel("/hpf/largeprojects/fkhalvati/Sara/lgg/Nomogram_study_LGG_data_Nov.27.xlsx",engine='openpyxl')
+    df_loc = pd.read_excel("sth.xlsx",engine='openpyxl')
     whole_data = BertDataset(data,image_folder, df_loc)#, patients_to_use)
     train_dataset,test_dataset = split_dataset_cv(whole_data,0.88)#0.8)#,0.6,0.2)#,0.6,0.2)
     file1 = open('test_dataset2', 'wb')
