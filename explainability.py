@@ -172,18 +172,14 @@ def calculate_3d_iou(box1, box2):
 
 # data=process_excel(df_text_excel)
 # data.index=range(data.shape[0])
-# image_folder="/hpf/largeprojects/fkhalvati/Projects/SickKids_Brain_Preprocessing/preprocessed_all_seq_kk_july_2022"
+# image_folder="sth"
 # dataset = BertDataset(data,image_folder)
 # test_dl = DataLoader(dataset, batch_size=4)
 
 inplanes=[64, 128, 256, 512]
-# model = image_text()
-# model=generate_model(model_depth=18, n_classes=1039,inplanes=inplanes)
-# weight_path = "/hpf/largeprojects/fkhalvati/Sara/sk_results"#/image_text_gen_fold__02"#pLGG_results/image_text/whole_MRI_classification__valid_fold__0"#"#.pth"#"/hpf/largeprojects/fkhalvati/Sara/sk_results/lgg_gen_fold__0.pth"
-weight_path = "/hpf/largeprojects/fkhalvati/Sara/pLGG_results/image_text"
-weight_path1 = "/hpf/largeprojects/fkhalvati/Sara/pLGG_results"
-# model.conv1 = nn.Conv3d(1, 64, kernel_size=(7, 7, 7), stride=(1, 2, 2), padding=(3, 3, 3), bias=False)
-# model.fc = nn.Linear(512, 1)
+weight_path = "sth"
+weight_path1 = "sth"
+
 
 
 
@@ -197,9 +193,7 @@ model.cnn.self_attention=SelfAttention(512)
 # model.cnn.self_attention2=SelfAttention()
 # model.cnn.depth_attention=DepthAttention(512)
 
-# model = medcam.inject(model.cuda(), output_dir="/hpf/largeprojects/fkhalvati/Sara/lgg_heatmaps/", save_maps=True)
-# os.umask(0) 
-# os.chmod('/hpf/largeprojects/fkhalvati/Sara/lgg_heatmaps/cnn.depth_attention', stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
+
 
 
 # model=image_text()
@@ -230,7 +224,7 @@ model = model.cuda()
 ##############3pretrain
 
 
-split_path = "/hpf/largeprojects/fkhalvati/Sara/lgg/splits/new_split"
+split_path = "new_split"
 # file = open('train_dataset_MRI', 'rb') #important
     
 # # dump information to that files
@@ -338,7 +332,6 @@ split_path = "/hpf/largeprojects/fkhalvati/Sara/lgg/splits/new_split"
     
 # #     # print("attribution",attribution.shape)
 # #     # plt.imshow(attribution.squeeze()[2,:,:,2].detach().numpy())
-# #     # plt.savefig(os.path.join('/hpf/largeprojects/fkhalvati/Sara/sk_results',f"heatmapimage__{0}.PNG"))
 # #     # upsampled_attr = LayerAttribution.interpolate(attribution, (240,240,155))
 # #     upsampled_attr = F.interpolate(attribution, (240,240,155),mode='trilinear')#,align_corners=True)
 # #     # print("attribution",attribution.shape)
@@ -362,7 +355,6 @@ split_path = "/hpf/largeprojects/fkhalvati/Sara/lgg/splits/new_split"
 # #     # for i in range(155):
         
 # #     #     plt.imshow(heatmap[2,:,:,i])
-# #     #     plt.savefig(os.path.join('/hpf/largeprojects/fkhalvati/Sara/sk_results',f"heatmapimage{i}.PNG"))
 # # #     # break
 # #     batch_size = heatmap.size(0)
 # #     total_batch_size += batch_size
@@ -483,7 +475,6 @@ split_path = "/hpf/largeprojects/fkhalvati/Sara/lgg/splits/new_split"
         
 #         # print("attribution",attribution.shape)
 #         # plt.imshow(attribution.squeeze()[2,:,:,2].detach().numpy())
-#         # plt.savefig(os.path.join('/hpf/largeprojects/fkhalvati/Sara/sk_results',f"heatmapimage__{0}.PNG"))
 #         # upsampled_attr = LayerAttribution.interpolate(attribution, (240,240,155))
 #         upsampled_attr = F.interpolate(attribution, (240,240,155),mode='trilinear')#,align_corners=True)
 #         # print("attribution",attribution.shape)
@@ -508,7 +499,6 @@ split_path = "/hpf/largeprojects/fkhalvati/Sara/lgg/splits/new_split"
 #             for i in range(155):
 #                 # print("h",heatmap.squeeze()[:,:,i].shape)
 #                 plt.imshow(heatmap.squeeze()[:,:,i].cpu())
-#                 plt.savefig(os.path.join('/hpf/largeprojects/fkhalvati/Sara/sk_results',f"heatmapimage{i}.PNG"))
 #     #     # break
 #         batch_size = heatmap.size(0)
 #         total_batch_size += batch_size
@@ -573,7 +563,6 @@ split_path = "/hpf/largeprojects/fkhalvati/Sara/lgg/splits/new_split"
 #         im=Image.fromarray(heatmap_array[0][:,:])
 #         print(heatmap_array[0][:,:].shape)
 #         im = im.convert('RGB')
-#         im.save(os.path.join('/hpf/largeprojects/fkhalvati/Sara/sk_results',f"heatmapimage{slice_idx}.PNG"))
 #         # print("unique",np.unique(heatmap_array[0][:,:]))
 #         heatmaps.append(heatmap_array)
     
@@ -615,9 +604,7 @@ split_path = "/hpf/largeprojects/fkhalvati/Sara/lgg/splits/new_split"
 #     # grayscale_cam=LayerAttribution.interpolate(grayscale_cam, (240,240,1)).detach().numpy()
 #     # im=Image.fromarray()#[0])
 #     plt.imshow(grayscale_cam[2,:,:,2])
-#     plt.savefig(os.path.join('/hpf/largeprojects/fkhalvati/Sara/sk_results',f"heatmapimage{0}.PNG"))
 #     # im = im.convert('RGB')
-#     # im.save(os.path.join('/hpf/largeprojects/fkhalvati/Sara/sk_results',f"heatmapimage{0}.PNG"))
 #     # grayscale_cam = grayscale_cam[0, :]
 #     # visualization = show_cam_on_image(input_tensor, grayscale_cam, use_rgb=True)
 #     break
@@ -627,101 +614,10 @@ split_path = "/hpf/largeprojects/fkhalvati/Sara/lgg/splits/new_split"
 
 
 
-###med3cam
-# from medcam import medcam
-# # Inject model with M3d-CAM
-# model = medcam.inject(model, output_dir='/hpf/largeprojects/fkhalvati/Sara/sk_results', save_maps=True)
-# model.eval()
-# for images,text,labels in test_dl:
-#     images=images.float()
-#     # Every time forward is called, attention maps will be generated and saved in the directory "attention_maps"
-#     output = model(images)
+
     
 
-#####med3cam
 
-
-# manually
-
-# gradient = None
-# feature_maps = None
-
-
-# def hook_fn(module, grad_in, grad_out):
-#     global gradient
-#     gradient = grad_out#[0]
-
-# def forward_hook_fn(module, input, output):
-#     global feature_maps
-#     feature_maps = output
-
-# target_layer = model.layer4[-1].conv2  # Choose the target layer
-# target_layer.register_backward_hook(hook_fn)
-# target_layer.register_forward_hook(forward_hook_fn)
-
-# model=model.cuda()
-
-
-
-
-# for images,text,labels in test_dl:
-#     images=images.cuda()
-#     images=images.float()
-#     labels=labels.cuda()
-#     labels=labels.float()
-#     # input_data = images
-#     # output = model(input_data)
-#     # target_class = torch.argmax(output)
-#     # model.zero_grad()
-#     # print("target",target_class)
-#     # output[0, 0].backward()
-
-
-
-#     # weights = torch.mean(gradient, dim=(2, 3, 4))  # Calculate the weights
-#     # print("feature_map",feature_maps.shape,weights.shape)
-#     # gradcam = torch.zeros_like(feature_maps) * weights.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)  # Create GradCAM heatmaps
-#     # gradcam = torch.sum(gradcam, dim=1, keepdim=True)  # Sum across the channels
-#     # gradcam = torch.relu(gradcam)  # Apply ReLU to focus on positive contributions
-
-#     # gradcam_normalized = (gradcam - gradcam.min()) / (gradcam.max() - gradcam.min())  # Normalize the heatmaps
-#     # gradcam_np = gradcam_normalized.detach().cpu().numpy().squeeze()  # Convert to numpy array
-
-#     # plt.imshow(gradcam_np[0,:,:,0], cmap='jet')
-#     # plt.axis('off')
-#     # plt.savefig(os.path.join('/hpf/largeprojects/fkhalvati/Sara/sk_results',f"heatmapimage{0}.PNG"))
-#     # break
-#     target_layer = model.layer4[-1].conv2
-#     target_layer.register_backward_hook(hook_fn)
-#     target_layer.register_forward_hook(forward_hook_fn)
-#     # Load and preprocess the input MR image
-#     input_image = images  # Load and preprocess your MR image
-
-#     # Forward pass to obtain the output feature map
-#     output = model(input_image)
-#     print("output",output.shape)
-#     # Compute gradients of the target class with respect to the output feature map
-#     output[0, 0].backward()
-
-#     # Get the gradients of the target layer
-#     gradients = target_layer.grad
-
-#     # Perform global average pooling on the gradients
-#     pooled_gradients = torch.mean(gradients, dim=[2, 3, 4])
-
-#     # Get the output feature map of the target layer
-#     target_layer_output = output[:, target_class]
-
-#     # Multiply the importance weights with the feature map channels
-#     weighted_feature_maps = target_layer_output * pooled_gradients[:, :, None, None, None]
-
-#     # Sum the weighted feature maps along the channel dimension
-#     heatmap = torch.sum(weighted_feature_maps, dim=1)
-
-#     # Normalize the heatmap
-#     heatmap = torch.relu(heatmap)
-#     heatmap /= torch.max(heatmap)
-#     break
 
 
 def main_slice(batch_masks,batch_heatmaps,batch_MRI):
@@ -819,8 +715,8 @@ with torch.no_grad():
         # close the file
         file.close()
         #CHANGE
-        # test_image_folder = os.path.join("/hpf/largeprojects/fkhalvati/Datasets/MedicalImages/BrainData/SickKids/preprocessed_pLGG_EN_Nov2023_KK")
-        # df = pd.read_csv("/hpf/largeprojects/fkhalvati/Sara/pLGG_4cohorts_532subs.csv")#,engine='openpyxl')
+        # test_image_folder = os.path.join("sth")
+        # df = pd.read_csv("sth.csv")
         # df = df[df["folder_name"].notnull()]
         # test_dataset = Eval_new_sk(df,test_image_folder)
 
@@ -1020,10 +916,10 @@ with torch.no_grad():
         #     #     axes[1].set_title('Heatmap Slice')
         #     #     axes[1].axis('off')
         #         try: 
-        #             plt.savefig(f"/hpf/largeprojects/fkhalvati/Sara/MRI - x/plots{co}_Original_gradcam{i}.png")
+        #             plt.savefig(f" x/plots{co}_Original_gradcam{i}.png")
         #         except: 
-        #             os.chmod(f"/hpf/largeprojects/fkhalvati/Sara/MRI - x/plots{co}_Original_gradcam{i}.png", stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
-                # plt.savefig(f"/hpf/largeprojects/fkhalvati/Sara/MRI - x/plots{co}_Original_gradcam{i}.png")
+        #             os.chmod(f"x/plots{co}_Original_gradcam{i}.png", stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
+                # plt.savefig(f"x/plots{co}_Original_gradcam{i}.png")
 
                 # # Plot binarized heatmap
                 # axes[2].imshow(binarized_heatmap_slice[0].squeeze(0).cpu(), cmap='gray')
@@ -1076,14 +972,14 @@ with torch.no_grad():
             axes[3].axis('off')
             # Adjust layout and save the figure
             plt.tight_layout()
-            os.chmod("/hpf/largeprojects/fkhalvati/Sara/MRI - x", stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
+            os.chmod(" x", stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
             os.umask(0)
               #CHANGE          
             # try: 
-            #     plt.savefig(f"/hpf/largeprojects/fkhalvati/Sara/MRI - x/plots{co}_bs1_saliency_ii.png")
+            #     plt.savefig(f"x/plots{co}_bs1_saliency_ii.png")
             # except: 
-            #     os.chmod(f"/hpf/largeprojects/fkhalvati/Sara/MRI - x/plots{co}_bs1_saliency_ii.png", stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
-            #     plt.savefig(f"/hpf/largeprojects/fkhalvati/Sara/MRI - x/plots{co}_bs1_saliency_ii.png")
+            #     os.chmod(f"x/plots{co}_bs1_saliency_ii.png", stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
+            #     plt.savefig(f"x/plots{co}_bs1_saliency_ii.png")
 
             plt.close()
             # heatmap_slice = heatmap[:, :, :, :,70]#max_slices]
@@ -1105,18 +1001,7 @@ with torch.no_grad():
             # print("heatttertyertgeh",heatmap_slice.shape,heatmap.shape)
             # heatmap_slice_image = Image.fromarray(heatmap_slice.squeeze().squeeze().detach().cpu().numpy().astype(np.uint8), mode='L')
             # masks_slice_image = Image.fromarray(masks_slice.squeeze().squeeze().detach().cpu().numpy(), mode='L')
-            # # os.chmod("/hpf/largeprojects/fkhalvati/Sara/lgg_heatmaps", stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
-            # # # os.chmod('/hpf/largeprojects/fkhalvati/Sara/lgg_heatmaps/heatmap_slice_image.png', stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
-            # # # os.chmod('/hpf/largeprojects/fkhalvati/Sara/lgg_heatmaps/masks_slice_image.png', stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
-            # # # heatmap_slice_image.save('/hpf/largeprojects/fkhalvati/Sara/lgg_heatmaps/heatmap_slice_image.png')
-            # # # masks_slice_image.save('/hpf/largeprojects/fkhalvati/Sara/lgg_heatmaps/masks_slice_image.png')
-            # plt.imshow(heatmap_slice_image, cmap='viridis')#, vmin=0, vmax=1)
-            # plt.axis('off')  # Turn off axis labels
-            # # os.chmod('/hpf/largeprojects/fkhalvati/Sara/lgg_heatmaps/mask_slice_image.png', stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
-            # print("co",co)
-            # os.chmod(f'/hpf/largeprojects/fkhalvati/Sara/lgg_heatmaps/heatmap_{co}_slice_image.png', stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
-            # plt.savefig(f'/hpf/largeprojects/fkhalvati/Sara/lgg_heatmaps/heatmap_{co}_slice_image.png', bbox_inches='tight', pad_inches=0.0)
-            # os.chmod(f'/hpf/largeprojects/fkhalvati/Sara/lgg_heatmaps/heatmap_{co}_slice_image.png', stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
+            
 # to here
             # print("heaaatttttttt",heatmap.shape)
             # down_mask=F.interpolate(masks, (heatmap.shape[-3:]),mode='trilinear')#,align_corners=True)
@@ -1124,35 +1009,8 @@ with torch.no_grad():
             import stat
             # show_attr(heatmap)
             
-            # for j in range(155):
-            #     layer_index = 0 
-            #     print("heatmap",heatmap[2,:,:,:,j].shape)
-            #     plt.imshow(masks[2,0,:,:,j].cpu().numpy())#, cmap='viridis')
-            #     plt.title(f'Attention Weights for Layer {layer_index}')
-            #     # plt.colorbar()
-            #     plt.show()
-            #     os.chmod(os.path.join('/hpf/largeprojects/fkhalvati/Sara/New folder'), stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
-
-            #     plt.savefig(os.path.join('/hpf/largeprojects/fkhalvati/Sara/New folder',f"heatmapimage_today{j}.PNG"))
-            #     os.chmod(os.path.join('/hpf/largeprojects/fkhalvati/Sara/New folder',f"heatmapimage_today{j}.PNG"), stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
-
-            # for i in range(155):
-            #     heatmap_slice = heatmap[:,:,:,:,i]
-            #     masks_slice = masks[:,:,:,:,i]
-            #     # print("dimmm",heatmap_slice.shape)
-                
-            #     # print("mean",masks.mean())
-            #     print("masks_slice",masks_slice.shape)
-            #     # heatmap_slice_image = Image.fromarray(heatmap_slice.squeeze().detach().cpu().numpy())#, mode='L')
-            #     masks_slice_image = Image.fromarray(masks_slice[0].squeeze().detach().cpu().numpy())#, mode='L')
-            #     os.chmod("/hpf/largeprojects/fkhalvati/Sara/lgg_heatmaps", stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
-            #     # os.chmod('/hpf/largeprojects/fkhalvati/Sara/lgg_heatmaps/heatmap_slice_image.png', stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
-            #     # os.chmod('/hpf/largeprojects/fkhalvati/Sara/lgg_heatmaps/masks_slice_image.png', stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
-            #     # heatmap_slice_image.save(f'/hpf/largeprojects/fkhalvati/Sara/lgg_heatmaps/heatmap_slice_image_{i}.png')
-            #     # masks_slice_image.save(f'/hpf/largeprojects/fkhalvati/Sara/lgg_heatmaps/masks_slice_image_{i}.png')
-            #     plt.imshow(masks_slice_image, cmap='gray', vmin=0, vmax=1)
-            #     plt.axis('off')  # Turn off axis labels
-            #     plt.savefig(f'/hpf/largeprojects/fkhalvati/Sara/lgg_heatmaps/masks_slice_image_{counter}_{i}.png', bbox_inches='tight', pad_inches=0.0)
+           
+           
             # soft_dice = soft_dice_coefficient(masks,heatmap)
             # soft_dice = calculate_3d_iou(masks,heatmap)
             # from pytorch3d.ops import box3d_overlap
@@ -1317,9 +1175,7 @@ with torch.no_grad():
 # from captum.concept._utils.common import concepts_to_str
 
 
-# # gen_data = pd.read_excel("/hpf/largeprojects/fkhalvati/Sara/lgg/Nomogram_study_LGG_data_Nov.27.xlsx",engine='openpyxl')
-# #         # # df2 = pd.read_excel("/hpf/largeprojects/fkhalvati/Sara/lgg/Stanford_new_data_09_21.xlsx",engine='openpyxl'))
-# #         # tumor_location = gen_data["Location_1"][gen_data["code"]==image_id].values
+
 
 
 
