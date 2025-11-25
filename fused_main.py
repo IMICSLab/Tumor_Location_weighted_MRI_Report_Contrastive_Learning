@@ -172,7 +172,7 @@ def train_model(args, data_ds,test_dl, output_model_path, tuning=False):
     
     test_auc=[]
 
-    weight_path="/hpf/largeprojects/fkhalvati/Sara/pretrain/resnet_18.pth"
+    weight_path="sth.pth"
     best_auc=0
     for fold, (train_idx,val_idx) in enumerate(splits.split(np.arange(len(data_ds)))):
     #    print(train_idx,val_idx)
@@ -576,7 +576,7 @@ def train_image_model_cv(args, data_ds, output_model_path, tuning=False):
     test_auc=[]
 #    optimizer.zero_grad()
 
-    weight_path="/hpf/largeprojects/fkhalvati/Sara/pretrain/resnet_18_23dataset.pth"
+    weight_path="sth.pth"
     best_auc=0
     outer_kfold = KFold(n_splits=5, shuffle=True,random_state=42)
     for test_fold, (outer_train_indices,outer_test_indices) in enumerate(outer_kfold.split(data_ds)):
@@ -889,7 +889,7 @@ def train_image_model(args, data_ds,test_dl, output_model_path, tuning=False):
     test_auc=[]
 #    optimizer.zero_grad()
 
-    weight_path="/hpf/largeprojects/fkhalvati/Sara/pretrain/resnet_18.pth"
+    weight_path="sth.pth"
     best_auc=0
     for fold, (train_idx,val_idx) in enumerate(splits.split(np.arange(len(data_ds)))):
     #    print(train_idx,val_idx)
@@ -1142,13 +1142,9 @@ def train_downstream_image_model_cv(args, data_ds, output_model_path, tuning=Fal
     total_train_auc={}
     total_val_auc={}
     test_auc=[]
-#    optimizer.zero_grad()
-    # weight_path = "/hpf/largeprojects/fkhalvati/Sara/pretrain/resnet_18_23dataset.pth"
-    # weight_path = f"/hpf/largeprojects/fkhalvati/Sara/pLGG_results/image_text/revised_attention_local_global__fold__0__epoch__{args.weight_epoch}__margin0.25"
-    # weight_path = f"/hpf/largeprojects/fkhalvati/Sara/pLGG_results/image_text/_na_location_attention_local_global__fold__0__epoch__{args.weight_epoch}__margin0.25" #_updated
-    weight_path = f"/hpf/largeprojects/fkhalvati/Sara/pLGG_results/image_text/_without_location_if_updated_location_attention_local_global__fold__0__epoch__340__margin0.25"
-    # weight_path =os.path.join(args.output_dir,f"downstream_whole_MRI_classification__valid_fold__lr0.0003_{4}{0}.pth")
-    # weight_path=f"/hpf/largeprojects/fkhalvati/Sara/pLGG_results/image_text/_location_attention_local_global__fold__0__epoch__{args.weight_epoch}__margin0.25"
+
+    weight_path = f"sth"
+   
     best_auc=0
     outer_kfold = KFold(n_splits=5, shuffle=True,random_state=42)
     for test_fold, (outer_train_indices,outer_test_indices) in enumerate(outer_kfold.split(data_ds)):
@@ -1348,16 +1344,9 @@ def train_downstream_image_model_cv(args, data_ds, output_model_path, tuning=Fal
                     images=images.float()
                     pred,_= model(images)
                     prob = torch.sigmoid(pred)
-                    # latent_space , _ = resnet(images.float())
+                   
 
-                    # latent_space_tsne = tsne.fit_transform(latent_space.detach().cpu().numpy())
-                    # plt.scatter(latent_space_tsne[:, 0], latent_space_tsne[:, 1])
-                    # plt.title('t-SNE Visualization of Latent Space')
-                    # plt.xlabel('t-SNE Dimension 1')
-                    # plt.ylabel('t-SNE Dimension 2')
-                    # os.chmod(f"/hpf/largeprojects/fkhalvati/Sara/MRI - x/tsne_bs1.png", stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
-                    # plt.savefig(f"/hpf/largeprojects/fkhalvati/Sara/MRI - x/tsne_bs1.png")
-                    # print("pred",pred.shape,labells.shape)
+                   
                     loss=classifier_criterion(pred,labells.unsqueeze(1).float())  
                     
                     
@@ -1482,10 +1471,8 @@ def train_downstream_image_text_cv(args, data_ds, output_model_path, tuning=Fals
     total_train_auc={}
     total_val_auc={}
     test_auc=[]
-#    optimizer.zero_grad()
-    # weight_path = "/hpf/largeprojects/fkhalvati/Sara/pretrain/resnet_18_23dataset.pth"
-    # weight_path=f"/hpf/largeprojects/fkhalvati/Sara/pLGG_results/image_text/revised_attention_local_global__fold__0__epoch__{args.weight_epoch}__margin0.25"
-    weight_path=f"/hpf/largeprojects/fkhalvati/Sara/pLGG_results/image_text/revised_attention_local_global__fold__0__epoch__{args.weight_epoch}__margin0.25"
+
+    weight_path="sth"
     best_auc=0
     outer_kfold = KFold(n_splits=5, shuffle=True,random_state=42)
     for test_fold, (outer_train_indices,outer_test_indices) in enumerate(outer_kfold.split(data_ds)):
@@ -1793,13 +1780,7 @@ def eval_downstream(model,test_dl,support_dl,mode):
                 prob = torch.sigmoid(pred)
                 predicted_labels = torch.where(prob >= threshold, torch.tensor(1,device="cuda"), torch.tensor(0,device="cuda"))
 
-                # latent_space , _ = resnet(images.float())
-                # latent_space_tsne = tsne.fit_transform(latent_space)
-                # plt.scatter(latent_space_tsne[:, 0], latent_space_tsne[:, 1])
-                # plt.title('t-SNE Visualization of Latent Space')
-                # plt.xlabel('t-SNE Dimension 1')
-                # plt.ylabel('t-SNE Dimension 2')
-                # plt.savefig(f"/hpf/largeprojects/fkhalvati/Sara/MRI - x/tsne_bs1.png")
+               
             elif mode== "zero_shot":
                 label_list = [0,1]
                 pred = zeroshot_classifier(label_list, images , model)
@@ -1970,14 +1951,14 @@ if __name__ == '__main__':
 
     
 
-    df_loc = pd.read_excel("/hpf/largeprojects/fkhalvati/Sara/lgg/Nomogram_study_LGG_data_Nov.27.xlsx",engine='openpyxl')
+    df_loc = pd.read_excel("sth.xlsx",engine='openpyxl')
     
     dataset2 = BertDataset(data,image_folder,df_loc)
     #######3
-    test_image_folder = os.path.join("/hpf/largeprojects/fkhalvati/Datasets/MedicalImages/BrainData/SickKids/preprocessed_pLGG_EN_Nov2023_KK")
-    df_loc = pd.read_excel("/hpf/largeprojects/fkhalvati/Sara/lgg/Nomogram_study_LGG_data_Nov.27.xlsx",sheet_name="Stanford",engine='openpyxl')
+    test_image_folder = os.path.join("sth")
+    df_loc = pd.read_excel("sth.xlsx",sheet_name="Stanford",engine='openpyxl')
     
-    # df = pd.read_csv("/hpf/largeprojects/fkhalvati/Sara/pLGG_4cohorts_532subs.csv")#,engine='openpyxl')
+    # df = pd.read_csv("sth.csv")
     
     # df = df[df["folder_name"].notnull()]
     
@@ -2006,17 +1987,12 @@ if __name__ == '__main__':
     # test_dl=load_data(test_dataset,test_dataset,test_dataset, args.batch_size)[2]
     inplanes=[64, 128, 256, 512]#512*2]
     if args.stage=="training":
-        # test_image_folder = os.path.join("/hpf/largeprojects/fkhalvati/Datasets/MedicalImages/BrainData/SickKids/preprocessed_pLGG_EN_Nov2023_KK")
-        # df = pd.read_csv("/hpf/largeprojects/fkhalvati/Sara/pLGG_4cohorts_532subs.csv")
-        # df = df[df["folder_name"].notnull()]
-        # test_dataset = Eval_new_sk(df,test_image_folder)
+        
         train_lossss, train_aucsss, val_lossss, val_aucsss=train_downstream_image_model_cv(args,dataset2,args.output_dir)#(args,train_dataset,test_dl,args.output_dir)
-        # train_lossss, train_aucsss, val_lossss, val_aucsss=train_downstream_image_text_cv(args,dataset2,args.output_dir)#(args,train_dataset,test_dl,args.output_dir)
-        # train_lossss, train_aucsss, val_lossss, val_aucsss=train_image_model_cv(args,dataset2,args.output_dir)#(args,train_dataset,test_dl,args.output_dir)
-
+       
 
     elif args.stage=="zero_shot":
-        weight_path=f"/hpf/largeprojects/fkhalvati/Sara/pLGG_results/image_text/_na_location_attention_local_global__fold__0__epoch__{args.weight_epoch}__margin0.25"
+        weight_path="sth"
         model=image_text_attention(emb_dim=128,num_heads=2,mode="global_local") 
         model.cnn.conv1 = nn.Conv3d(1, 64, kernel_size=7, stride=(2, 2, 2), padding=(3, 3, 3), bias=False)
 
@@ -2037,10 +2013,10 @@ if __name__ == '__main__':
         # net_dict.update(pretrain_dict)
         model.load_state_dict(pretrain_dict)
 
-        # test_image_folder = os.path.join("/hpf/largeprojects/fkhalvati/Sara/new_sk2_preprocessing/")
-        test_image_folder = os.path.join("/hpf/largeprojects/fkhalvati/Datasets/MedicalImages/BrainData/SickKids/preprocessed_pLGG_EN_Nov2023_KK")
+       
+        test_image_folder = os.path.join("sth")
 
-        df = pd.read_csv("/hpf/largeprojects/fkhalvati/Sara/pLGG_4cohorts_532subs.csv")
+        df = pd.read_csv("sth.csv")
         df = df[df["folder_name"].notnull()]
         name_list = os.listdir(test_image_folder)
         df = df[df["folder_name"].isin(name_list)]
@@ -2051,7 +2027,7 @@ if __name__ == '__main__':
         print("test_auc",test_auc)
         
     elif args.stage=="few_shot":
-        weight_path=f"/hpf/largeprojects/fkhalvati/Sara/pLGG_results/image_text/_local_if_updated_location_attention_local_global__fold__0__epoch__{args.weight_epoch}__margin0.25"
+        weight_path=f"sth"
         model=image_text_attention(emb_dim=128,num_heads=2,mode="global_local") 
         model.cnn.conv1 = nn.Conv3d(1, 64, kernel_size=7, stride=(2, 2, 2), padding=(3, 3, 3), bias=False)
 
@@ -2073,10 +2049,10 @@ if __name__ == '__main__':
         # net_dict.update(pretrain_dict)
         model.load_state_dict(pretrain_dict)
 
-        # test_image_folder = os.path.join("/hpf/largeprojects/fkhalvati/Sara/new_sk2_preprocessing/")
-        test_image_folder = os.path.join("/hpf/largeprojects/fkhalvati/Datasets/MedicalImages/BrainData/SickKids/preprocessed_pLGG_EN_Nov2023_KK")
+        
+        test_image_folder = os.path.join("sth")
 
-        df = pd.read_csv("/hpf/largeprojects/fkhalvati/Sara/pLGG_4cohorts_532subs.csv")
+        df = pd.read_csv("sth.csv")
         df = df[df["folder_name"].notnull()]
         name_list = os.listdir(test_image_folder)
         df = df[df["folder_name"].isin(name_list)]
@@ -2101,7 +2077,7 @@ if __name__ == '__main__':
         data=process_excel(df_text_excel)
         data.index=range(data.shape[0])
       
-        df_loc_1 = pd.read_excel("/hpf/largeprojects/fkhalvati/Sara/lgg/Nomogram_study_LGG_data_Nov.27.xlsx",engine='openpyxl')
+        df_loc_1 = pd.read_excel("sth.xlsx",engine='openpyxl')
         #### model initialization
         model=downstream_image_classifier()
         model.cnn.conv1 = nn.Conv3d(1, 64, kernel_size=7, stride=(2, 2, 2), padding=(3, 3, 3), bias=False)
@@ -2128,18 +2104,16 @@ if __name__ == '__main__':
         precision_list=[]
         recall_list = []
         f1_list = []
-        # for i,path in enumerate([2,1,4,0,4]):
-        # test_image_folder = os.path.join("/hpf/largeprojects/fkhalvati/Sara/new_sk2_preprocessing/")
-        test_image_folder = os.path.join("/hpf/largeprojects/fkhalvati/Datasets/MedicalImages/BrainData/SickKids/preprocessed_pLGG_EN_Nov2023_KK")
-        df_loc = pd.read_excel("/hpf/largeprojects/fkhalvati/Sara/lgg/Nomogram_study_LGG_data_Nov.27.xlsx",sheet_name="Stanford",engine='openpyxl')
-        # df2 = pd.read_excel("/hpf/largeprojects/fkhalvati/Sara/lgg/Stanford_new_data_09_21.xlsx",engine='openpyxl')
-        df = pd.read_csv("/hpf/largeprojects/fkhalvati/Sara/pLGG_4cohorts_532subs.csv")#,engine='openpyxl')
-        # df2=df2.iloc[:10]
+       
+        test_image_folder = os.path.join("sth")
+        df_loc = pd.read_excel("sth.xlsx",sheet_name="Stanford",engine='openpyxl')
+        
+        df = pd.read_csv("sth.csv")
+       
         df = df[df["folder_name"].notnull()]
-        # print("columnsss",df2.loc[9,'Unnamed: 0'])
+       
         
 
-        # dataset = Eval_new_sk(data,image_folder)
 #         file = open('test_dataset2', 'rb') #important
     
 # # dump information to that file
@@ -2178,7 +2152,7 @@ if __name__ == '__main__':
             # weight_path = os.path.join(args.output_dir,f"new_image_text_tl_attention_fold__{i}{path}")
             # weight_path = os.path.join(args.output_dir,f"transformer_baseline_text_lr(9e-5)_({i+1}, {path+1}).pth")#{i+1}{path+1}")
             # weight_path = os.path.join(args.output_dir,f"whole_MRI_withoutlayer3_classification__valid_fold__lr0.0001_0{path}.pth")
-            weight_path=f"/hpf/largeprojects/fkhalvati/Sara/pLGG_results/image_text/_ds_local_cross19update_downstream_whole_MRI_classification__valid_fold__lr0.0003_00.pth"
+            weight_path=f"sth.pth"
 
             # if i==0:
             #     weight_path = os.path.join(args.output_dir,"epochs",f"update_downstream_whole_MRI_classification__valid_fold__lr0.0003_{i}{0}.pth")
