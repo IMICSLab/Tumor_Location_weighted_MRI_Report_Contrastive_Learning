@@ -80,10 +80,7 @@ class BertDataset(Dataset):
     def __len__(self):
         return len(self.df)
 
-    # def load_tumor_locations(self,image_id):
-    #     gen_data = pd.read_excel("/hpf/largeprojects/fkhalvati/Sara/lgg/Nomogram_study_LGG_data_Nov.27.xlsx",engine='openpyxl')
-    #     tumor_location = gen_data["Location_1"][gen_data["code"] == image_id].values  # Extract tumor location
-    #     return tumor_location
+    
 
     def __getitem__(self, idx):
     #    image_name = self.csv_file['dicom_id'].iloc[idx]
@@ -120,14 +117,10 @@ class BertDataset(Dataset):
         tokenized=tokenizer.encode_plus(raw_text,return_tensors="pt",padding="max_length", max_length = 1159) #949 #917  #1159   # 1047
 
         image_id=self.df.loc[idx,"image_id"]
-        # gen_data = pd.read_excel("/hpf/largeprojects/fkhalvati/Sara/lgg/Nomogram_study_LGG_data_Nov.27.xlsx",engine='openpyxl')
         #################333 loc
         filtered_df = self.df_loc[self.df_loc['code'] == image_id]
         tumor_location = filtered_df['Location_1'].values
-        #################333 loc
-        # # df2 = pd.read_excel("/hpf/largeprojects/fkhalvati/Sara/lgg/Stanford_new_data_09_21.xlsx",engine='openpyxl'))
-        # tumor_location = gen_data["Location_1"][gen_data["code"]==image_id].values
-
+        
 
         # print("loc",tumor_location)
         # tumor_location = self.df.loc[idx,"Location_1"]
